@@ -1,3 +1,4 @@
+use std::env;
 use warp::Filter;
 use tokio::sync::broadcast;
 use futures_util::{StreamExt, SinkExt};
@@ -14,9 +15,12 @@ async fn main() {
             ws.on_upgrade(move |socket| handle_socket(socket, tx))
         });
 
-    println!("WebSocket server running on ws://localhost:3030/chat");
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()); // Default to 8080 if not set
+    let port: u16 = port.parse().expect("Invalid PORT value");
 
-    warp::serve(chat).run(([127, 0, 0, 1], 3030)).await;
+    println!("WebSocket server running on ws://0.0.0.0:{}", port);
+
+    warp::serve(chat).run(([0, 0, 0, 0], port)).await;
 }
 
 /// **Handles the WebSocket connection**
