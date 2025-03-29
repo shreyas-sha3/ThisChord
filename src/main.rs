@@ -1,22 +1,25 @@
+use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::sync::Arc;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{broadcast, Mutex, RwLock};
+use warp::ws::{WebSocket, Message as WsMessage};
 use warp::Filter;
 use futures_util::{StreamExt, SinkExt};
-use warp::ws::{WebSocket, Message as WsMessage};
-use std::collections::HashMap;
-use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
-    let (tx, _rx) = broadcast::channel::<(String, String)>(10); // Broadcast messages with usernames
+    let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
+
+    let message_history = Arc::new(Mutex::new(VecDeque::new())); // ✅ Move above `let chat`
+
     let chat = warp::path("chat")
         .and(warp::ws())
         .map(move |ws: warp::ws::Ws| {
             let tx = tx.clone();
             let users = users.clone();
-            ws.on_upgrade(move |socket| handle_socket(socket, tx,users))
+            let history = message_history.clone();  // ✅ Clone it correctly
+            ws.on_upgrade(move |socket| handle_socket(socket, tx, users, history))
         });
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse().expect("Invalid PORT value");
@@ -25,59 +28,98 @@ async fn main() {
     warp::serve(chat).run(([0, 0, 0, 0], port)).await;
 }
 
-/// **Handles WebSocket Connection**
-async fn handle_socket(ws: WebSocket, tx: broadcast::Sender<(String, String)>, users: Arc<RwLock<HashMap<String, Arc<Mutex<futures_util::stream::SplitSink<WebSocket, WsMessage>>>>>>) 
-{
+fn server_formatter(message: &str) -> String {
+    format!(
+        "\n-----------------------------\n[SERVER] {}\n-----------------------------",
+        message
+    )
+}
+
+async fn handle_socket(
+    ws: WebSocket, 
+    tx: broadcast::Sender<(String, String)>, 
+    users: Arc<RwLock<HashMap<String, Arc<Mutex<futures_util::stream::SplitSink<WebSocket, WsMessage>>>>>>,
+    message_history: Arc<Mutex<VecDeque<String>>>, // ✅ Ensure message history is correctly passed
+) {
     let (sender, mut receiver) = ws.split();
-    let sender = Arc::new(Mutex::new(sender)); // ✅ Wrap sender in Arc<Mutex<>> to allow shared access
+    let sender = Arc::new(Mutex::new(sender));
     let mut rx = tx.subscribe();
 
     let mut username = String::new();
 
-    // 🔹 Ask for username (force non-empty)
+    // 🔹 Ask for username
     loop {
-        sender.lock().await.send(WsMessage::text("Enter your username:")).await.ok();
+        sender.lock().await.send(WsMessage::text(server_formatter("Enter your username"))).await.ok();
     
         if let Some(Ok(msg)) = receiver.next().await {
             if let Ok(text) = msg.to_str() {
                 let trimmed = text.trim();
                 let mut users_lock = users.write().await;
-                if !trimmed.is_empty() && !users_lock.contains_key(trimmed) {  // ✅ Ensure username is unique
+                if !trimmed.is_empty() && !users_lock.contains_key(trimmed) {
                     username = trimmed.to_string();
                     users_lock.insert(username.clone(), sender.clone());
                     break;
                 } else {
-                    sender.lock().await.send(WsMessage::text("Username Error (Invalid/Taken)")).await.ok();
+                    sender.lock().await.send(WsMessage::text(server_formatter("Username Error (Invalid/Taken)"))).await.ok();
                 }
             }
         }
     }
-    
-    sender.lock().await.send(WsMessage::text(format!("Welcome, {}! Type :q to leave.", username))).await.ok();
+    sender.lock().await.send(WsMessage::text(server_formatter(&format!("Welcome, {}! Type :q to leave.", username)))).await.ok();
+
+    // 🔹 Send chat history
+    {
+        let history = message_history.lock().await;
+        for msg in history.iter() {
+            sender.lock().await.send(WsMessage::text(msg.clone())).await.ok();
+        }
+    }
+
 
     let cloned_username = username.clone();
     let sender_clone = sender.clone();
 
-    // 🔹 Background task to receive messages
+    let users_clone = users.clone();
     tokio::spawn(async move {
         while let Ok((msg, sender_name)) = rx.recv().await {
-            if sender_name != cloned_username {
+            let users_lock = users_clone.read().await;
+            if sender_name != cloned_username && users_lock.contains_key(&cloned_username) {
                 sender_clone.lock().await.send(WsMessage::text(msg)).await.ok();
             }
         }
     });
 
+    let history_clone = message_history.clone(); // ✅ Correctly clone history before async move
+
     // 🔹 Main chat loop
     while let Some(Ok(msg)) = receiver.next().await {
         if let Ok(text) = msg.to_str() {
             if text == ":q" {
-                sender.lock().await.send(WsMessage::text("You have disconnected successfully.")).await.ok();
-                tx.send((format!("{} has left the chat.", username), username.clone())).ok();
-                println!("{} disconnected", username);
+                sender.lock().await.send(WsMessage::text(server_formatter("You have disconnected successfully."))).await.ok();
                 users.write().await.remove(&username);
                 break;
             }
+            if text == "/users" {
+                let user_list = users.read().await.keys().cloned().collect::<Vec<String>>().join(", ");
+                sender.lock().await.send(WsMessage::text(server_formatter(&format!("Online users: {}", user_list)))).await.ok();
+                continue;
+            }
+
+            // 🔹 Store new message in history
+            {
+                let mut history = history_clone.lock().await;
+                if history.len() >= 10 {
+                    history.pop_front(); // ✅ Remove oldest message if over limit
+                }
+                history.push_back(format!("{}: {}", username, text));
+            }
+
             tx.send((format!("{}: {}", username, text), username.clone())).ok();
         }
     }
+
+    // 🔹 Handle unexpected disconnect
+    println!("{} disconnected", username); // ✅ Fixed println! format
+    users.write().await.remove(&username);
+    tx.send((server_formatter(&format!("{} has left the chat.", username)), "SERVER".to_string())).ok();
 }
