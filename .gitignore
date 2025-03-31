@@ -1,1 +1,22 @@
-/target
+# Build directories
+target/
+gui/build/
+
+*.o
+*.a
+*.so
+*.exe
+*.appimage
+
+.vscode/
+
+# Qt specific build files
+*.pro.user
+*.pro.user.*
+CMakeFiles/
+CMakeCache.txt
+Makefile
+
+#system files
+*.swp
+.DS_Store

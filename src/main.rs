@@ -11,14 +11,14 @@ async fn main() {
     let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
 
-    let message_history = Arc::new(Mutex::new(VecDeque::new())); // ✅ Move above `let chat`
+    let message_history = Arc::new(Mutex::new(VecDeque::new())); 
 
     let chat = warp::path("chat")
         .and(warp::ws())
         .map(move |ws: warp::ws::Ws| {
             let tx = tx.clone();
             let users = users.clone();
-            let history = message_history.clone();  // ✅ Clone it correctly
+            let history = message_history.clone();  
             ws.on_upgrade(move |socket| handle_socket(socket, tx, users, history))
         });
 
@@ -29,17 +29,14 @@ async fn main() {
 }
 
 fn server_formatter(message: &str) -> String {
-    format!(
-        "\n-----------------------------\n[SERVER] {}\n-----------------------------",
-        message
-    )
+    format!("\n  [[SERVER]]  {}\n",message)
 }
 
 async fn handle_socket(
     ws: WebSocket, 
     tx: broadcast::Sender<(String, String)>, 
     users: Arc<RwLock<HashMap<String, Arc<Mutex<futures_util::stream::SplitSink<WebSocket, WsMessage>>>>>>,
-    message_history: Arc<Mutex<VecDeque<String>>>, // ✅ Ensure message history is correctly passed
+    message_history: Arc<Mutex<VecDeque<String>>>, 
 ) {
     let (sender, mut receiver) = ws.split();
     let sender = Arc::new(Mutex::new(sender));
@@ -47,10 +44,9 @@ async fn handle_socket(
 
     let mut username = String::new();
 
-    // 🔹 Ask for username
-    loop {
-        sender.lock().await.send(WsMessage::text(server_formatter("Enter your username"))).await.ok();
-    
+    // Ask for username
+    sender.lock().await.send(WsMessage::text(server_formatter("Enter your username"))).await.ok();
+    loop {    
         if let Some(Ok(msg)) = receiver.next().await {
             if let Ok(text) = msg.to_str() {
                 let trimmed = text.trim();
@@ -60,14 +56,19 @@ async fn handle_socket(
                     users_lock.insert(username.clone(), sender.clone());
                     break;
                 } else {
-                    sender.lock().await.send(WsMessage::text(server_formatter("Username Error (Invalid/Taken)"))).await.ok();
+                    sender.lock().await.send(WsMessage::text(server_formatter("Username Error (RETRY)"))).await.ok();
                 }
             }
         }
+         else {
+        // 🔹 Handle disconnect before entering username
+        println!("Client disconnected before entering username.");
+        return;  // Exit the function early
+    }
     }
     sender.lock().await.send(WsMessage::text(server_formatter(&format!("Welcome, {}! Type :q to leave.", username)))).await.ok();
 
-    // 🔹 Send chat history
+    // Send chat history
     {
         let history = message_history.lock().await;
         for msg in history.iter() {
@@ -83,15 +84,15 @@ async fn handle_socket(
     tokio::spawn(async move {
         while let Ok((msg, sender_name)) = rx.recv().await {
             let users_lock = users_clone.read().await;
-            if sender_name != cloned_username && users_lock.contains_key(&cloned_username) {
+            if  users_lock.contains_key(&cloned_username) {
                 sender_clone.lock().await.send(WsMessage::text(msg)).await.ok();
             }
         }
     });
 
-    let history_clone = message_history.clone(); // ✅ Correctly clone history before async move
+    let history_clone = message_history.clone(); // clone history before async move
 
-    // 🔹 Main chat loop
+    // Main chat loop
     while let Some(Ok(msg)) = receiver.next().await {
         if let Ok(text) = msg.to_str() {
             if text == ":q" {
@@ -105,11 +106,11 @@ async fn handle_socket(
                 continue;
             }
 
-            // 🔹 Store new message in history
+            // Store new message in history
             {
                 let mut history = history_clone.lock().await;
                 if history.len() >= 10 {
-                    history.pop_front(); // ✅ Remove oldest message if over limit
+                    history.pop_front(); // Remove oldest message if over limit
                 }
                 history.push_back(format!("{}: {}", username, text));
             }
@@ -119,7 +120,8 @@ async fn handle_socket(
     }
 
     // 🔹 Handle unexpected disconnect
-    println!("{} disconnected", username); // ✅ Fixed println! format
+    println!("{} disconnected", username); 
     users.write().await.remove(&username);
     tx.send((server_formatter(&format!("{} has left the chat.", username)), "SERVER".to_string())).ok();
 }
+
