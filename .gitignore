@@ -1,6 +1,7 @@
 # Build directories
 target/
 gui/build/
+gui/
 
 *.o
 *.a
