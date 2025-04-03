@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="ws.js"></script>
+    <title>ThisChord</title>
+    <link rel="stylesheet" href="./styles.css">
+
 </head>
 <body>
     <h1>ThisChord</h1>
+    <p id="connection-status">Connecting...</p>
     <div id="ChatBox">
     </div>
     <form id="MessageBox" onsubmit="sendMessage(event)">
         <input type="text" id="ClientMessage" autocomplete="off" autofocus>
         <button type="submit" id="sendBtn">Send</button>
     </form>
+    <script src="./ws.js"></script>
 </body>
 </html>

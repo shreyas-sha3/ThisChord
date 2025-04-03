@@ -97,6 +97,7 @@ async fn handle_socket(
             if text == ":q" {
                 sender.lock().await.send(WsMessage::text(r#"["SERVER", "You have disconnected successfully."]"#)).await.ok();
                 users.write().await.remove(&username);
+                sender.lock().await.close().await.ok(); 
                 break;
             }
             if text == "/users" {

@@ -1,10 +1,39 @@
-const socket = new WebSocket("ws://localhost:8080/chat");
+let socket
+const statusElement = document.getElementById("connection-status");
 
-socket.onopen = () => console.log("Connected to WebSocket");
+ConnectSocket()
+
+function ToggleStatus(status){
+    if(status==1){
+    statusElement.textContent = "Connected!";
+    statusElement.style.color="#b8bb26";
+    }
+    else if(status==0){
+        statusElement.textContent = "Connecting...";
+        statusElement.style.color="#83a598";
+    }
+    else if(status==-1){
+        statusElement.textContent = "Disconnected...(Refresh)";
+        statusElement.style.color="#fb4934";
+    }
+}
+
+function ConnectSocket() {
+    ToggleStatus(0);
+    socket = new WebSocket("wss://rust-chat-um86.onrender.com/chat");
+    socket.onopen = () => {
+        ToggleStatus(1);
+    };
+}
+
+socket.onclose = () => {
+    ToggleStatus(-1);
+};
+
 socket.onmessage = (event) =>{ console.log("Message received:", event.data);
-
 displayMessage(event.data);
 }
+
 
 function sendMessage(event){
     event.preventDefault();
@@ -24,12 +53,9 @@ function displayMessage(text) {
         }
         
         let messagesDiv = document.getElementById("ChatBox");
+        messageContainer = document.createElement("div");
 
-        if(user==lastUser){
-            messageContainer = messagesDiv.lastElementChild;
-        }
-        else{
-            messageContainer = document.createElement("div");
+        if(user!=lastUser){
             messageUser = document.createElement("h4");
             messageUser.textContent = user || "You";
             messageContainer.appendChild(messageUser);
