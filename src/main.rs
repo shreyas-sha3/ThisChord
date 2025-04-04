@@ -30,6 +30,20 @@ async fn main() {
     warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 }
 
+
+#[derive(Clone)]
+struct User {
+    password: String,
+}
+
+type Users = Arc<RwLock<HashMap<String, User>>>;
+
+fn create_user_store() -> Users {
+    let mut users = HashMap::new();
+    users.insert("testuser".to_string(), User { password: "password123".to_string() });
+    Arc::new(RwLock::new(users))
+}
+
 async fn handle_socket(
     ws: WebSocket, 
     tx: broadcast::Sender<(String, String)>, 

@@ -38,10 +38,11 @@ displayMessage(event.data);
 function sendMessage(event){
     event.preventDefault();
     let MessageBox = document.getElementById("ClientMessage");
+    if(MessageBox.value.trim()){
     socket.send(MessageBox.value);
     displayMessage(MessageBox.value);
     MessageBox.value = "";
-}
+}}
 lastUser=""
 function displayMessage(text) {
         let user,message,messageContainer;
