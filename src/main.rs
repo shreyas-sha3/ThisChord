@@ -11,8 +11,8 @@ async fn main() {
     let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
     let message_history = Arc::new(Mutex::new(VecDeque::new())); 
-    let static_files = warp::fs::dir("static");
-
+    //let static_files = warp::fs::dir("static");
+    let ping = warp::path("ping").map(|| warp::reply::json(&"pong"));
     let chat = warp::path("chat")
         .and(warp::ws())
         .map(move |ws: warp::ws::Ws| {
@@ -22,8 +22,8 @@ async fn main() {
             ws.on_upgrade(move |socket| handle_socket(socket, tx, users, history))
         });
     
-    let routes = chat.or(static_files);
-
+    //let routes = chat.or(static_files);
+    let routes = chat.or(ping);
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse().expect("Invalid PORT value");
     println!("WebSocket server running on ws://0.0.0.0:{}", port);
 
@@ -94,6 +94,9 @@ async fn handle_socket(
     // Main chat loop
     while let Some(Ok(msg)) = receiver.next().await {
         if let Ok(text) = msg.to_str() {
+            if text.trim()==""{
+                continue;
+            }
             if text == ":q" {
                 sender.lock().await.send(WsMessage::text(r#"["SERVER", "You have disconnected successfully."]"#)).await.ok();
                 users.write().await.remove(&username);
