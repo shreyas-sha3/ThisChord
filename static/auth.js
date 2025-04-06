@@ -12,7 +12,7 @@ form.addEventListener("submit", async (e) => {
   const formData = new FormData(form);
   const data = new URLSearchParams(formData);
 
-  const response = await fetch(`http${url}/${mode}`, {
+  const response = await fetch(`https${url}/${mode}`, {
     method: "POST",
     body: data,
     credentials: "include",
