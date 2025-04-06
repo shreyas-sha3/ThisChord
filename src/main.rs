@@ -136,7 +136,6 @@ async fn main() {
                             return Ok::<_, warp::Rejection>(reply.into_response());
                         }
                     }
-
                     let reply = warp::reply::json(&json!({
                         "status": "unauthorized"
                     }));
