@@ -93,8 +93,8 @@ async fn main() {
                                 .execute(&*db)
                                 .await
                                 .unwrap();
-                            //let cookie = format!("session={}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned", token);
-                            let cookie = format!("session={}; Path=/; ", token);
+                            let cookie = format!("session={}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned", token);
+                            //let cookie = format!("session={}; Path=/; ", token);
                             let mut response = warp::reply::html("Login successful!").into_response();
                             response.headers_mut().insert(
                                 SET_COOKIE,

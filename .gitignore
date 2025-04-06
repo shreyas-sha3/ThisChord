@@ -9,6 +9,7 @@ gui/
 *.exe
 *.appimage
 *.db
+*.env
 
 .vscode/
 
