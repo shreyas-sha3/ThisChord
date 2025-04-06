@@ -210,24 +210,24 @@ async fn handle_socket(
     let sender = Arc::new(Mutex::new(sender));
     let mut rx = tx.subscribe();
 
-    //sender.lock().await.send(WsMessage::text(format!(r#"["SERVER", "Welcome, {}! Type :q to leave."]"#, username))).await.ok();
-    // Send chat history
+    // Send message history
     {
         let history = message_history.lock().await;
         for msg in history.iter() {
-            let json_msg = format!(r#"{}"#, msg); // Already formatted as JSON
-            sender.lock().await.send(WsMessage::text(json_msg)).await.ok();
+            sender.lock().await.send(WsMessage::text(msg.clone())).await.ok();
         }
     }
+
     users.write().await.insert(username.clone(), sender.clone());
-    let connection_message = format!(r#"["SERVER", "{} has entered the chat."]"#, username);
-    tx.send((connection_message.to_string(), "SERVER".to_string())).ok();
+
+    let connection_message = json!(["SERVER", format!("{} has entered the chat.", username)]).to_string();
+    tx.send((connection_message, "SERVER".to_string())).ok();
 
     let cloned_username = username.clone();
     let sender_clone = sender.clone();
     let users_clone = users.clone();
-    
-    // Background task to receive messages
+
+    // Broadcast receiver
     tokio::spawn(async move {
         while let Ok((msg, sender_name)) = rx.recv().await {
             let users_lock = users_clone.read().await;
@@ -241,39 +241,42 @@ async fn handle_socket(
 
     while let Some(Ok(msg)) = receiver.next().await {
         if let Ok(text) = msg.to_str() {
-            if text.trim()==""{
-                continue;
-            }
-            if text == ":q" {
-                sender.lock().await.send(WsMessage::text(r#"["SERVER", "You have disconnected successfully."]"#)).await.ok();
-                users.write().await.remove(&username);
-                sender.lock().await.close().await.ok(); 
-                break;
-            }
-            if text == "/users" {
-                let user_list = users.read().await.keys().cloned().collect::<Vec<String>>().join(", ");
-                let users_message = format!(r#"["SERVER", "Online users: {}"]"#, user_list);
-                sender.lock().await.send(WsMessage::text(users_message)).await.ok();
+            let trimmed = text.trim();
+            if trimmed.is_empty() {
                 continue;
             }
 
-            // Store new message in history
-            {
-                let mut history = history_clone.lock().await;
-                if history.len() >= 30 {
-                    history.pop_front(); // Remove oldest message if over limit
+            match trimmed {
+                ":q" => {
+                    let exit_msg = json!(["SERVER", "You have disconnected successfully."]).to_string();
+                    sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
+                    users.write().await.remove(&username);
+                    sender.lock().await.close().await.ok();
+                    break;
                 }
-                history.push_back(format!(r#"["{}", "{}"]"#, username, text));
+                "/users" => {
+                    let user_list = users.read().await.keys().cloned().collect::<Vec<_>>().join(", ");
+                    let user_msg = json!(["SERVER", format!("Online users: {}", user_list)]).to_string();
+                    sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
+                    continue;
+                }
+                _ => {
+                    // Broadcast and store message
+                    let json_msg = json!([username, trimmed]).to_string();
+                    {
+                        let mut history = history_clone.lock().await;
+                        if history.len() >= 30 {
+                            history.pop_front();
+                        }
+                        history.push_back(json_msg.clone());
+                    }
+                    tx.send((json_msg, username.clone())).ok();
+                }
             }
-
-            // Send the message to all users
-            let message_json = format!(r#"["{}", "{}"]"#, username, text);
-            tx.send((message_json, username.clone())).ok();
         }
     }
-
     println!("{} disconnected", username); 
     users.write().await.remove(&username);
-    let disconnect_message = format!(r#"["SERVER", "{} has left the chat."]"#, username);
-    tx.send((disconnect_message.to_string(), "SERVER".to_string())).ok();
+    let disconnect_message = json!(["SERVER", format!("{} has left the chat.", username)]).to_string();
+    tx.send((disconnect_message, "SERVER".to_string())).ok();
 }

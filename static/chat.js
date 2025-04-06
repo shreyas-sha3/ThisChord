@@ -66,7 +66,7 @@ function sendMessage(event){
 lastUser=""
 function displayMessage(text) {
         let user,message,messageContainer;
-
+        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 20;
         try {
             [user, message] = JSON.parse(text);
         } catch {
@@ -90,9 +90,10 @@ function displayMessage(text) {
 
         messageContainer.classList.add(
             user === "SERVER" ? "ServerMessage" : (user===username ? "SelfMessage" : "OtherMessage")
-        );        
+        );
+        if (user === username || nearBottom) {        
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
+        }
     }
 
 const logoutButton = document.getElementById("logout-button");
