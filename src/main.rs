@@ -96,7 +96,7 @@ async fn main() {
                                 "UPDATE users SET session_token = ?1 WHERE username = ?2",
                                 params![token, username],
                             ).unwrap();
-                            let cookie = format!("session={}; Path=/; SameSite=None; Secure;", token);
+                            let cookie = format!("session={}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned", token);
                             let mut response = warp::reply::html("Login successful!").into_response();
                             response.headers_mut().insert(
                                 SET_COOKIE,
