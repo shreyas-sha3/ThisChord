@@ -223,7 +223,6 @@ async fn handle_socket(
     let connection_message = format!(r#"["SERVER", "{} has entered the chat."]"#, username);
     tx.send((connection_message.to_string(), "SERVER".to_string())).ok();
 
-
     let cloned_username = username.clone();
     let sender_clone = sender.clone();
     let users_clone = users.clone();

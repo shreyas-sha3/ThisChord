@@ -6,15 +6,15 @@ let username
 
 
 //CHAT
-fetch(`http${url}/auth-check`, {
+fetch(`https${url}/auth-check`, {
     credentials: "include"
   })
   .then(res => res.json())
   .then(data => {
-    if (data.status !== "ok") {
-      window.location.href = "./auth.html";
-    } else {
+    if (data.status === "ok") {
       username = data.username;
+    } else {
+    window.location.href = "./auth.html";
     }
   });
 
