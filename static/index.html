@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Authorize</title>
-  <link rel="stylesheet" href="./styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThisChord</title>
+    <link rel="stylesheet" href="./styles.css">
 
 </head>
 <body>
-  <div id="LoginBox">
-  <h1 id="form-title">Login</h1><br>
-  <form id="auth-form">
-    <label>Username: <input type="text" name="username" required /></label><br />
-    <label>Password: <input type="password" name="password" required /></label><br />
-    <button type="submit">Login</button>
-  </form>
-
-  <button id="log-reg-toggle">Switch to Register</button>
-
-  <div id="log-message"></div>
-</div>
-  <script src="./auth.js"></script>
+    <h1>ThisChord</h1>
+    <div id="top-bar">
+    <p id="connection-status">Connecting...</p>
+    <button id="logout-button">Logout</button>
+    </div>
+    <div id="ChatBox">
+    </div>
+    <form id="MessageBox" onsubmit="sendMessage(event)">
+        <input type="text" id="ClientMessage" autocomplete="off" autofocus>
+        <button type="submit" id="sendBtn">Send</button>
+    </form>
+    <script src="./chat.js"></script>
 </body>
 </html>
