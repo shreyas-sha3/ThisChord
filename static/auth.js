@@ -1,4 +1,5 @@
-let url = "://rust-chat-um86.onrender.com";
+let url = "https://rust-chat-um86.onrender.com";
+//let url = "http://localhost:8080";
 
 const form = document.getElementById("auth-form");
 const msg = document.getElementById("log-message");
@@ -12,7 +13,7 @@ form.addEventListener("submit", async (e) => {
   const formData = new FormData(form);
   const data = new URLSearchParams(formData);
 
-  const response = await fetch(`https${url}/${mode}`, {
+  const response = await fetch(`${url}/${mode}`, {
     method: "POST",
     body: data,
     credentials: "include",

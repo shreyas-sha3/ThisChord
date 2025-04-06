@@ -2,7 +2,6 @@ use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::sync::Arc;
 use futures_util::{SinkExt, StreamExt};
-use rusqlite::{params, Connection, Result};
 use tokio::sync::{broadcast, Mutex, RwLock};
 use warp::ws::{Message as WsMessage, WebSocket};
 use warp::{Reply, http::header::{SET_COOKIE, HeaderValue}};
@@ -10,32 +9,25 @@ use warp::Filter;
 use uuid::Uuid;
 use warp::cors::Cors;
 use serde_json::json;
-
-fn init_db() -> Result<Connection> {
-    let conn = Connection::open("users.db")?;
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            session_token TEXT
-        )",
-        [],
-    )?;
-    Ok(conn)
-}
+use sqlx::PgPool;
+use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() {
     let cors = warp::cors()
-    .allow_any_origin()
-    .allow_credentials(true)
-    .allow_headers(vec!["Content-Type"]);
+        .allow_any_origin()
+        .allow_credentials(true)
+        .allow_headers(vec!["Content-Type"]);
+
+    dotenv().ok();
 
     let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
     let message_history = Arc::new(Mutex::new(VecDeque::new()));
-    let db = Arc::new(Mutex::new(init_db().expect("Failed to connect to DB")));
+
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL not set");
+    let pool = PgPool::connect(&db_url).await.expect("Failed to connect to DB");
+    let db = Arc::new(pool);
 
     let register = {
         let db = db.clone();
@@ -47,27 +39,27 @@ async fn main() {
                 async move {
                     let username = form.get("username").unwrap_or(&"".to_string()).clone();
                     let password = form.get("password").unwrap_or(&"".to_string()).clone();
-    
+
                     if username.is_empty() || password.is_empty() {
                         return Ok::<_, warp::Rejection>(warp::reply::html("Missing username or password"));
                     }
-    
-                    let conn = db.lock().await;
-                    let result = conn.execute(
-                        "INSERT INTO users (username, password) VALUES (?1, ?2)",
-                        params![username, password],
-                    );
-    
+
+                    let result = sqlx::query("INSERT INTO users (username, password) VALUES ($1, $2)")
+                        .bind(&username)
+                        .bind(&password)
+                        .execute(&*db)
+                        .await;
+
                     let reply = match result {
                         Ok(_) => warp::reply::html("Registered successfully!"),
                         Err(_) => warp::reply::html("Username already taken"),
                     };
-    
+
                     Ok(reply)
                 }
             })
     };
-    
+
     let login = {
         let db = db.clone();
         warp::path("login")
@@ -85,18 +77,24 @@ async fn main() {
                         );
                     }
     
-                    let conn = db.lock().await;
-                    let mut stmt = conn.prepare("SELECT password FROM users WHERE username = ?1").unwrap();
-                    let result: Result<String> = stmt.query_row(params![username], |row| row.get(0));
+                    let result = sqlx::query_scalar::<_, String>(
+                        "SELECT password FROM users WHERE username = $1"
+                    )
+                    .bind(&username)
+                    .fetch_optional(&*db)
+                    .await;
     
                     let response = match result {
-                        Ok(db_password) if db_password == password => {
+                        Ok(Some(db_password)) if db_password == password => {
                             let token = Uuid::new_v4().to_string();
-                            conn.execute(
-                                "UPDATE users SET session_token = ?1 WHERE username = ?2",
-                                params![token, username],
-                            ).unwrap();
-                            let cookie = format!("session={}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned", token);
+                            sqlx::query("UPDATE users SET session_token = $1 WHERE username = $2")
+                                .bind(&token)
+                                .bind(&username)
+                                .execute(&*db)
+                                .await
+                                .unwrap();
+                            //let cookie = format!("session={}; Path=/; HttpOnly; SameSite=None; Secure; Partitioned", token);
+                            let cookie = format!("session={}; Path=/; ", token);
                             let mut response = warp::reply::html("Login successful!").into_response();
                             response.headers_mut().insert(
                                 SET_COOKIE,
@@ -112,6 +110,7 @@ async fn main() {
                 }
             })
     };    
+
     let auth_check = {
         let db = db.clone();
         warp::path("auth-check")
@@ -120,19 +119,19 @@ async fn main() {
                 let db = db.clone();
                 async move {
                     if let Some(token) = session {
-                        let conn = db.lock().await;
-                        let user = conn.query_row(
-                            "SELECT username FROM users WHERE session_token = ?1",
-                            [token],
-                            |row| row.get::<_, String>(0),
-                        );
-                        
-                        if let Ok(username) = user {
+                        let result = sqlx::query_scalar::<_, String>(
+                            "SELECT username FROM users WHERE session_token = $1"
+                        )
+                        .bind(&token)
+                        .fetch_optional(&*db)
+                        .await;
+
+                        if let Ok(Some(username)) = result {
                             let reply = warp::reply::json(&json!({
                                 "status": "ok",
                                 "username": username
                             }));
-                            
+
                             return Ok::<_, warp::Rejection>(reply.into_response());
                         }
                     }
@@ -143,8 +142,8 @@ async fn main() {
                     Ok::<_, warp::Rejection>(response)
                 }
             })
-    };    
-    
+    };
+
     let ping = warp::path("ping").map(|| warp::reply::json(&"pong"));
 
     let chat = {
@@ -152,52 +151,62 @@ async fn main() {
         let users = users.clone();
         let history = message_history.clone();
         let db = db.clone();
-    
-    warp::path("chat")
-    .and(warp::cookie::optional("session"))
-    .and(warp::ws())
-    .and_then(move |session: Option<String>, ws: warp::ws::Ws| {
-        let db = db.clone();
-        let tx = tx.clone();
-        let users = users.clone();
-        let history = history.clone();
-    
-        async move {
-            match session {
-                Some(token) => {
-                    let conn = db.lock().await;
-                    let mut stmt = conn.prepare("SELECT username FROM users WHERE session_token = ?1").unwrap();
-                    let user: Result<String> = stmt.query_row(params![token], |row| row.get(0));
-    
-                    match user {
-                        Ok(username) => {
-                            let reply = ws.on_upgrade(move |socket| {
-                                handle_socket(socket, tx, users, history, username)
-                            });
-                            Ok::<_, warp::Rejection>(reply.into_response())
+
+        warp::path("chat")
+            .and(warp::cookie::optional("session"))
+            .and(warp::ws())
+            .and_then(move |session: Option<String>, ws: warp::ws::Ws| {
+                let db = db.clone();
+                let tx = tx.clone();
+                let users = users.clone();
+                let history = history.clone();
+
+                async move {
+                    if let Some(token) = session {
+                        match sqlx::query_scalar::<_, String>(
+                            "SELECT username FROM users WHERE session_token = $1"
+                        )
+                        .bind(&token)
+                        .fetch_one(&*db)
+                        .await
+                        {
+                            Ok(username) => {
+                                let reply = ws.on_upgrade(move |socket| {
+                                    handle_socket(socket, tx, users, history, username)
+                                });
+                                Ok::<_, warp::Rejection>(reply.into_response())
+                            }
+                            Err(_) => {
+                                let resp = warp::reply::with_status(
+                                    "Unauthorized",
+                                    warp::http::StatusCode::UNAUTHORIZED,
+                                );
+                                Ok::<_, warp::Rejection>(resp.into_response())
+                            }
                         }
-                        Err(_) => {
-                            let redirect = warp::redirect::temporary(warp::http::Uri::from_static("/login"));
-                            Ok::<_, warp::Rejection>(redirect.into_response())
-                        }
+                    } else {
+                        let resp = warp::reply::with_status(
+                            "Unauthorized",
+                            warp::http::StatusCode::UNAUTHORIZED,
+                        );
+                        Ok::<_, warp::Rejection>(resp.into_response())
                     }
                 }
-                None => {
-                    let redirect = warp::redirect::temporary(warp::http::Uri::from_static("/login"));
-                    Ok::<_, warp::Rejection>(redirect.into_response())
-                }
-            }
-        }
-    })
+            })
     };
-    
-    //let static_files = warp::fs::dir("./static");
-    let routes = register.or(login).or(ping).or(chat).or(auth_check).with(cors);
+
+    let routes = register
+        .or(login)
+        .or(ping)
+        .or(chat)
+        .or(auth_check)
+        .with(cors);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse().expect("Invalid PORT value");
     println!("WebSocket server running on ws://0.0.0.0:{}", port);
     warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 }
+    
 
 async fn handle_socket(
     ws: WebSocket, 
