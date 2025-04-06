@@ -22,16 +22,107 @@ body {
     color: var(--fg);
     display: flex;
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
     height: 100vh;
     padding: 20px;
 }
 
+
+/*
+LOGIN
+*/
+
+#LoginBox {
+    
+    background-color: var(--dark-gray);
+    padding: 30px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+  }
+  
+  #auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    outline: none;  
+    user-select: none; 
+    
+  }
+  
+  #auth-form input {
+    padding: 10px;
+    border: 2px solid var(--fg);
+    border-radius: 5px;
+    background-color: var(--bg);
+    color: var(--fg);
+    font-size: 14px;
+    
+  }
+  
+  #auth-form button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--yellow);
+    color: var(--bg);
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  #auth-form button:hover {
+    background-color: var(--orange);
+  }
+  
+  #log-reg-toggle {
+    margin-top: 20px;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--blue);
+    color: var(--bg);
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    
+  }
+  
+  #log-reg-toggle:hover {
+    background-color: var(--blue);
+  }
+  
+  #log-message {
+    margin-top: 10px;
+    color: var(--red);
+    font-size: 14px;
+  }
+  
+
+/*
+CHAT
+*/
+#top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
+}
+
 #connection-status {
     color: var(--blue);
-    display: block;
-    text-align: right;
-    width: 100%;
-    padding: 10px; 
+}
+
+#logout-button {
+    color: var(--blue);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
 }
 #ChatBox {
     flex: 1;
@@ -121,6 +212,8 @@ body {
 }
 
 .ServerMessage {
+    align-self: center;
+    width: 80%;
     font-weight: bold;
     font-size: 18px;
     text-align: center;

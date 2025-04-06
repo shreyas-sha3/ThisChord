@@ -9,13 +9,16 @@
 </head>
 <body>
     <h1>ThisChord</h1>
+    <div id="top-bar">
     <p id="connection-status">Connecting...</p>
+    <button id="logout-button">Logout</button>
+    </div>
     <div id="ChatBox">
     </div>
     <form id="MessageBox" onsubmit="sendMessage(event)">
         <input type="text" id="ClientMessage" autocomplete="off" autofocus>
         <button type="submit" id="sendBtn">Send</button>
     </form>
-    <script src="./ws.js"></script>
+    <script src="./chat.js"></script>
 </body>
 </html>
