@@ -66,7 +66,6 @@ function sendMessage(event){
 lastUser=""
 function displayMessage(text) {
         let user,message,messageContainer;
-        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 20;
         try {
             [user, message] = JSON.parse(text);
         } catch {
@@ -75,6 +74,7 @@ function displayMessage(text) {
         
         let messagesDiv = document.getElementById("ChatBox");
         messageContainer = document.createElement("div");
+        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 20;
 
         if(user!=lastUser){
             messageUser = document.createElement("h4");
