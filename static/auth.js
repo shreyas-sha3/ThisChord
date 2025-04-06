@@ -21,7 +21,7 @@ form.addEventListener("submit", async (e) => {
   const text = await response.text();
 
   if (mode === "login" && text.includes("Login successful")) {
-    window.location.href = "/chat.html";
+    window.location.href = "/index.html";
   } else {
     msg.textContent = text;
   }
