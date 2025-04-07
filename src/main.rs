@@ -270,7 +270,6 @@ async fn handle_socket(
 
     let history_clone = message_history.clone();
 
-    // Main loop to receive client messages
     while let Some(Ok(msg)) = receiver.next().await {
         if let Ok(text) = msg.to_str() {
             let trimmed = text.trim();
@@ -278,23 +277,6 @@ async fn handle_socket(
                 continue;
             }
     
-            // ✨ Handle special commands first
-            if trimmed == ":q" {
-                let exit_msg = json!(["SERVER", "You have disconnected successfully."]).to_string();
-                sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
-                users.write().await.remove(&username);
-                sender.lock().await.close().await.ok();
-                break;
-            }
-    
-            if trimmed == "/users" {
-                let user_list = users.read().await.keys().cloned().collect::<Vec<_>>().join(", ");
-                let user_msg = json!(["SERVER", format!("Online users: {}", user_list)]).to_string();
-                sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
-                continue; // ✅ Don't fall through to JSON parsing
-            }
-    
-            // ✨ Then try parsing as JSON
             match serde_json::from_str::<ClientMessage>(trimmed) {
                 Ok(ClientMessage::DirectMessage { to, msg }) => {
                     let dm_text = json!([format!("~Whisper <- {}~", username), msg]).to_string();
@@ -304,26 +286,49 @@ async fn handle_socket(
                         recipient_sender.lock().await.send(WsMessage::text(dm_text.clone())).await.ok();
                     }
     
-                    let echo_text = json!([username, format!("~Whisper -> {}~\n{}", to, msg)]).to_string();
+                    // Echo back to sender
+                    let echo_text = json!([username, format!("~Whisper -> {}~ \n{}", to, msg)]).to_string();
                     sender.lock().await.send(WsMessage::text(echo_text)).await.ok();
                 }
     
                 Ok(ClientMessage::BroadcastMessage { msg }) => {
-                    let json_msg = json!([username, msg]).to_string();
-    
-                    {
-                        let mut history = history_clone.lock().await;
-                        if history.len() >= 30 {
-                            history.pop_front();
+                    match msg.as_str() {
+                        "/users" => {
+                            let user_list = users.read().await
+                                .keys()
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            let user_msg = json!(["SERVER", format!("Online users: {}", user_list)]).to_string();
+                            sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
                         }
-                        history.push_back(json_msg.clone());
-                    }
     
-                    tx.send((json_msg, username.clone())).ok();
+                        ":q" => {
+                            let exit_msg = json!(["SERVER", "You have disconnected successfully."]).to_string();
+                            sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
+                            users.write().await.remove(&username);
+                            sender.lock().await.close().await.ok();
+                            break;
+                        }
+    
+                        _ => {
+                            let json_msg = json!([username, msg]).to_string();
+    
+                            {
+                                let mut history = history_clone.lock().await;
+                                if history.len() >= 30 {
+                                    history.pop_front();
+                                }
+                                history.push_back(json_msg.clone());
+                            }
+    
+                            tx.send((json_msg, username.clone())).ok();
+                        }
+                    }
                 }
     
                 Err(_) => {
-                    let warn_msg = json!(["SERVER", "Unknown command or invalid message format."]).to_string();
+                    let warn_msg = json!(["SERVER", "Invalid message format."]).to_string();
                     sender.lock().await.send(WsMessage::text(warn_msg)).await.ok();
                 }
             }
