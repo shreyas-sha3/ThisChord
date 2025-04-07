@@ -277,23 +277,40 @@ async fn handle_socket(
             if trimmed.is_empty() {
                 continue;
             }
+    
+            // ✨ Handle special commands first
+            if trimmed == ":q" {
+                let exit_msg = json!(["SERVER", "You have disconnected successfully."]).to_string();
+                sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
+                users.write().await.remove(&username);
+                sender.lock().await.close().await.ok();
+                break;
+            }
+    
+            if trimmed == "/users" {
+                let user_list = users.read().await.keys().cloned().collect::<Vec<_>>().join(", ");
+                let user_msg = json!(["SERVER", format!("Online users: {}", user_list)]).to_string();
+                sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
+                continue; // ✅ Don't fall through to JSON parsing
+            }
+    
+            // ✨ Then try parsing as JSON
             match serde_json::from_str::<ClientMessage>(trimmed) {
                 Ok(ClientMessage::DirectMessage { to, msg }) => {
                     let dm_text = json!([format!("~Whisper <- {}~", username), msg]).to_string();
                     let users_map = users.read().await;
-            
+    
                     if let Some(recipient_sender) = users_map.get(&to) {
                         recipient_sender.lock().await.send(WsMessage::text(dm_text.clone())).await.ok();
                     }
-            
-                    // Echo back to sender
-                    let echo_text = json!([username,format!("~Whisper -> {}~ \n {}",to,msg)]).to_string();
+    
+                    let echo_text = json!([username, format!("~Whisper -> {}~\n{}", to, msg)]).to_string();
                     sender.lock().await.send(WsMessage::text(echo_text)).await.ok();
                 }
-
+    
                 Ok(ClientMessage::BroadcastMessage { msg }) => {
                     let json_msg = json!([username, msg]).to_string();
-
+    
                     {
                         let mut history = history_clone.lock().await;
                         if history.len() >= 30 {
@@ -301,36 +318,18 @@ async fn handle_socket(
                         }
                         history.push_back(json_msg.clone());
                     }
-
+    
                     tx.send((json_msg, username.clone())).ok();
                 }
-
+    
                 Err(_) => {
-                    match trimmed {
-                        ":q" => {
-                            let exit_msg = json!(["SERVER", "You have disconnected successfully."]).to_string();
-                            sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
-                            users.write().await.remove(&username);
-                            sender.lock().await.close().await.ok();
-                            break;
-                        }
-
-                        "/users" => {
-                            let user_list = users.read().await.keys().cloned().collect::<Vec<_>>().join(", ");
-                            let user_msg = json!(["SERVER", format!("Online users: {}", user_list)]).to_string();
-                            sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
-                        }
-
-                        _ => {
-                            let warn_msg = json!(["SERVER", "Unknown command or invalid message format."]).to_string();
-                            sender.lock().await.send(WsMessage::text(warn_msg)).await.ok();
-                        }
-                    }
+                    let warn_msg = json!(["SERVER", "Unknown command or invalid message format."]).to_string();
+                    sender.lock().await.send(WsMessage::text(warn_msg)).await.ok();
                 }
             }
         }
     }
-
+    
     println!("{} disconnected", username);
     users.write().await.remove(&username);
     let disconnect_message = json!(["SERVER", format!("{} has left the chat.", username)]).to_string();
