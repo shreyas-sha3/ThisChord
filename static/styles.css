@@ -124,6 +124,7 @@ CHAT
     font-size: 16px;
     font-weight: bold;
 }
+
 #ChatBox {
     flex: 1;
     overflow-y: auto;
@@ -182,14 +183,29 @@ CHAT
 #ChatBox {
     scroll-behavior: smooth;
 }
-#ChatBox h4 {
-    color: var(--yellow);
-}
 
+#ChatBox button {
+    color: var(--yellow);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 19px;
+    font-weight: bold;
+}
 #ChatBox p {
     color: var(--fg);
 }
 
+#ChatBox .ServerMessage button {
+    pointer-events: none;
+    cursor: not-allowed;
+    color: var(--blue);
+}
+#ChatBox .SelfMessage button {
+    pointer-events: none;
+    cursor: not-allowed;
+    color: var(--orange);
+}
 .OtherMessage {
     display: inline-block;
     background: var(--bg);
@@ -202,6 +218,7 @@ CHAT
 
 .SelfMessage {
     align-self: flex-end;
+    text-align:end;
     display: inline-block;
     background: var(--bg);
     border-radius: 5px;
@@ -221,8 +238,3 @@ CHAT
     border-radius: 5px;
     padding: 10px;
 }
-#ChatBox .ServerMessage h4 {
-    color: var(--blue);
-}
-
-

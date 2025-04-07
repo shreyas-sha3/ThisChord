@@ -8,14 +8,15 @@ let username
 
 
 //CHAT
-fetch(`https${url}/auth-check`, {
+fetch(`http${url}/auth-check`, {
     credentials: "include"
   })
   .then(res => res.json())
   .then(data => {
     if (data.status === "ok") {
-      username = data.username;
-      ConnectSocket()
+    username = data.username;
+    ConnectSocket()
+    document.getElementById("ChatBox").scrollTop = messagesDiv.scrollHeight;;
     } else {
     window.location.href = "./auth.html";
     }
@@ -41,9 +42,11 @@ function ToggleStatus(status){
 
 function ConnectSocket() {
     ToggleStatus(0);
-    socket = new WebSocket(`wss${url}/chat`);
+    socket = new WebSocket(`ws${url}/chat`);
     socket.onopen = () => {
         ToggleStatus(1);
+        let messagesDiv = document.getElementById("ChatBox");
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     };
     socket.onclose = () => {
         ToggleStatus(-1);
@@ -55,52 +58,79 @@ function ConnectSocket() {
 }
 
 
-function sendMessage(event){
+function sendMessage(event) {
     event.preventDefault();
-    let MessageBox = document.getElementById("ClientMessage");
-    msg=MessageBox.value
-    if(msg.trim()){
-    socket.send(msg);
-    displayMessage(JSON.stringify([username,msg]));;
-    MessageBox.value = "";
-}}
-lastUser=""
-function displayMessage(text) {
-        let user,message,messageContainer;
-        try {
-            [user, message] = JSON.parse(text);
-        } catch {
-            message = text;
-        }
-        
-        let messagesDiv = document.getElementById("ChatBox");
-        messageContainer = document.createElement("div");
-        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 40;
+    const MessageBox = document.getElementById("ClientMessage");
+    const msg = MessageBox.value.trim()
+    if (msg) {
+         {
+        const payload = msg_type==="broadcast" ? {type: msg_type,msg: msg} : {type: msg_type,to:dm_recipient,msg: msg}
+        socket.send(JSON.stringify(payload));
+        //displayMessage(JSON.stringify([username, msg]));
+        MessageBox.value = "";
+    
+    }}
+}
 
-        if(user!=lastUser){
-            messageUser = document.createElement("h4");
-            messageUser.textContent = user;
-            messageContainer.appendChild(messageUser);
-            lastUser=user;
-        }
+let msg_type = "broadcast", dm_recipient;
 
-        let messageContent = document.createElement("p");
-        messageContent.textContent = message;        
-        messageContainer.appendChild(messageContent);
-        messagesDiv.appendChild(messageContainer);
+document.getElementById("ChatBox").addEventListener("click", (event) => {
+    if (event.target.tagName === "BUTTON") {
+        const button_text = event.target.textContent.trim();        
+        const messageBox = document.getElementById("MessageBox");
+        const existingInfo = document.querySelector("#MessageBox h4");
+        if (existingInfo) existingInfo.remove();
 
-        messageContainer.classList.add(
-            user === "SERVER" ? "ServerMessage" : (user===username ? "SelfMessage" : "OtherMessage")
-        );
-        if (user === username || nearBottom) {        
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        if (button_text !== dm_recipient) {
+            msg_type = "dm"; 
+            dm_recipient = button_text;
+            const info = document.createElement("h4");
+            info.textContent = `Whisper -> ${dm_recipient}:`;
+            messageBox.prepend(info); 
+        } else {
+            msg_type = "broadcast"; 
+            dm_recipient = null;
         }
     }
+});
 
-const logoutButton = document.getElementById("logout-button");
-if (logoutButton) {
-  logoutButton.addEventListener("click", () => {
-    document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    window.location.href = "/auth.html"; // Redirect to login page
-  });
+lastUser=""
+function displayMessage(text) {
+    let user, message, messageContainer;
+    try {
+        [user, message] = JSON.parse(text);
+    } catch {
+        message = text;
+    }
+
+    let messagesDiv = document.getElementById("ChatBox");
+    messageContainer = document.createElement("div");
+    const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 40;
+
+    if (user != lastUser) {
+        const messageUser = document.createElement("button");
+        messageUser.textContent = user;
+        messageContainer.appendChild(messageUser);
+        lastUser = user;
+    }
+
+    const messageContent = document.createElement("p");
+
+    // Convert newlines to <br> and escape HTML
+    messageContent.innerHTML = message
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+
+    messageContainer.appendChild(messageContent);
+    messagesDiv.appendChild(messageContainer);
+
+    messageContainer.classList.add(
+        user === "SERVER" ? "ServerMessage" : (user === username ? "SelfMessage" : "OtherMessage")
+    );
+
+    if (user === username || nearBottom) {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 }
