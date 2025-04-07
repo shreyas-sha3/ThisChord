@@ -16,7 +16,6 @@ fetch(`http${url}/auth-check`, {
     if (data.status === "ok") {
     username = data.username;
     ConnectSocket()
-    document.getElementById("ChatBox").scrollTop = messagesDiv.scrollHeight;;
     } else {
     window.location.href = "./auth.html";
     }
