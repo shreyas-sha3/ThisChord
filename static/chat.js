@@ -15,12 +15,12 @@ fetch(`https${url}/auth-check`, {
   .then(data => {
     if (data.status === "ok") {
       username = data.username;
+      ConnectSocket()
     } else {
     window.location.href = "./auth.html";
     }
   });
 
-ConnectSocket()
 
 //CHAT
 
@@ -45,14 +45,13 @@ function ConnectSocket() {
     socket.onopen = () => {
         ToggleStatus(1);
     };
-}
-
-socket.onclose = () => {
-    ToggleStatus(-1);
-};
-
-socket.onmessage = (event) =>{ console.log("Message received:", event.data);
-displayMessage(event.data);
+    socket.onclose = () => {
+        ToggleStatus(-1);
+    };
+    
+    socket.onmessage = (event) =>{ console.log("Message received:", event.data);
+    displayMessage(event.data);
+    }
 }
 
 
@@ -76,7 +75,7 @@ function displayMessage(text) {
         
         let messagesDiv = document.getElementById("ChatBox");
         messageContainer = document.createElement("div");
-        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 20;
+        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 40;
 
         if(user!=lastUser){
             messageUser = document.createElement("h4");

@@ -11,6 +11,7 @@ use warp::cors::Cors;
 use serde_json::json;
 use sqlx::PgPool;
 use dotenvy::dotenv;
+use regex::Regex;
 
 #[tokio::main]
 async fn main() {
@@ -24,26 +25,32 @@ async fn main() {
     let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
     let message_history = Arc::new(Mutex::new(VecDeque::new()));
-
+    let username_regex = Arc::new(Regex::new(r"^[a-zA-Z0-9_.-]{4,}$").unwrap());
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL not set");
     let pool = PgPool::connect(&db_url).await.expect("Failed to connect to DB");
     let db = Arc::new(pool);
 
     let register = {
         let db = db.clone();
+        let username_regex = username_regex.clone();
         warp::path("register")
             .and(warp::post())
             .and(warp::body::form())
             .and_then(move |form: HashMap<String, String>| {
                 let db = db.clone();
+                let username_regex = username_regex.clone();
                 async move {
                     let username = form.get("username").unwrap_or(&"".to_string()).clone();
                     let password = form.get("password").unwrap_or(&"".to_string()).clone();
 
-                    if username.is_empty() || password.is_empty() {
-                        return Ok::<_, warp::Rejection>(warp::reply::html("Missing username or password"));
+                    if !username_regex.is_match(&username) {
+                        return Ok::<_, warp::Rejection>(warp::reply::html(
+                            "Username must be minimum 4 characters, and can only contain letters, numbers, underscores (_), hyphens (-), or dots (.)"
+                        ).into_response());
                     }
-
+                    if password.len() < 8 || password.contains(' ') {
+                        return Ok(warp::reply::html("Password must be at least 8 characters long and contain no spaces.").into_response());
+                    }
                     let result = sqlx::query("INSERT INTO users (username, password) VALUES ($1, $2)")
                         .bind(&username)
                         .bind(&password)
@@ -55,7 +62,7 @@ async fn main() {
                         Err(_) => warp::reply::html("Username already taken"),
                     };
 
-                    Ok(reply)
+                    Ok(reply.into_response())
                 }
             })
     };
