@@ -8,7 +8,7 @@ let username
 
 
 //CHAT
-fetch(`http${url}/auth-check`, {
+fetch(`https${url}/auth-check`, {
     credentials: "include"
   })
   .then(res => res.json())
@@ -41,7 +41,7 @@ function ToggleStatus(status){
 
 function ConnectSocket() {
     ToggleStatus(0);
-    socket = new WebSocket(`ws${url}/chat`);
+    socket = new WebSocket(`wss${url}/chat`);
     socket.onopen = () => {
         ToggleStatus(1);
         let messagesDiv = document.getElementById("ChatBox");
