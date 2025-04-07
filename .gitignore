@@ -8,6 +8,8 @@ gui/
 *.so
 *.exe
 *.appimage
+*.db
+*.env
 
 .vscode/
 
