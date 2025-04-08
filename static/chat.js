@@ -64,15 +64,18 @@ function ConnectSocket() {
 function sendMessage(event) {
     event.preventDefault();
     const MessageBox = document.getElementById("ClientMessage");
-    const msg = MessageBox.value.trim()
+    const msg = MessageBox.value.trim();
     if (msg) {
-         {
-        const payload = msg_type==="broadcast" ? {type: msg_type,msg: msg} : {type: msg_type,to:dm_recipient,msg: msg}
+        const payload = {
+            type: msg_type,
+            msg: msg
+        };
+        if (msg_type === "dm") {
+            payload.to = dm_recipient;
+        }
         socket.send(JSON.stringify(payload));
-        //displayMessage(JSON.stringify([username, msg]));
         MessageBox.value = "";
-    
-    }}
+    }
 }
 
 let msg_type = "broadcast", dm_recipient;
@@ -152,16 +155,7 @@ document.querySelector('.server-btn:first-child').addEventListener('click', () =
     switchToDM(null);
 });
 
-// === Send message example ===
-document.getElementById("sendBtn").addEventListener("click", () => {
-    const messageInput = document.getElementById("ClientMessage");
-    const msg = messageInput.value.trim();
-    if (!msg) return;
 
-    saveChat(dm_recipient, [...loadChat(dm_recipient), [username, msg]]);
-    displayMessage(JSON.stringify([username, msg]));
-    messageInput.value = '';
-});
 
 
 document.addEventListener("keydown", function (event) {
