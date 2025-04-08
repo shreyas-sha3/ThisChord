@@ -1,27 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThisChord</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="stylesheet" href="./styles.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ThisChord</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-    <button id="themeToggle">ThisChord</button>
+  <div id="app-container">
+    <div id="sidebar-container">
+        <div id="sidebar-top">
+          <div id="server-bar">
+            <button class="server-btn">#</button>
+            <button class="server-btn">α</button>
+            <button class="server-btn">β</button>
+            <button class="server-btn">γ</button>
+            <button class="server-btn">δ</button>
+            <button class="server-btn">ε</button>
+            <button class="server-btn add-server">+</button>
+          </div>
+          <div id="dm-pane">
+            <h3>DIRECT MESSAGES</h3>
+          </div>
+        </div>
+      
+        <div id="user-bar">
+            <div id="user-info">
+              <button id="themeToggle"></button>
+              <p id="username">art3mi5</p> 
+            </div>
+            <button id="logout-button">Logout</button>
+          </div>          
+        </div>
+    
+    <!-- Main Chat Section -->
+    <div id="main-content">
 
-    <div id="top-bar">
-    <p id="connection-status">Connecting...</p>
-    <button id="logout-button">Logout</button>
-    </div>
-    <div id="ChatBox">
-    </div>
-    <form id="MessageBox" onsubmit="sendMessage(event)">
-        <input type="text" id="ClientMessage" autocomplete="off" autofocus>
+      <h2 id="ChatTitle">Public Chat</h2>
+      <div id="ChatBox"></div>
+      <form id="MessageBox" onsubmit="sendMessage(event)">
+        <input type="text" id="ClientMessage" autocomplete="off" autofocus />
         <button type="submit" id="sendBtn">Send</button>
-    </form>
-    <script src="./chat.js"></script>
-    <script src="./themes.js" defer></script>
+      </form>
+    </div>
+  </div>
+  
+  <script src="./chat.js"></script>
+  <script src="./themes.js" defer></script>
 </body>
 </html>
