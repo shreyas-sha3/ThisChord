@@ -10,6 +10,8 @@
     --orange: #fe8019;
 }
 
+
+
 * {
     margin: 0;
     padding: 0;
@@ -28,6 +30,25 @@ body {
     padding: 20px;
 }
 
+/* Scrollbar styling */
+#ChatBox::-webkit-scrollbar {
+    width: 10px;
+}
+
+#ChatBox::-webkit-scrollbar-track {
+    background: var(--dark-gray);
+    border-radius: 5px;
+}
+
+#ChatBox::-webkit-scrollbar-thumb {
+    background-color: var(--yellow);
+    border-radius: 5px;
+    border: 2px solid var(--dark-gray);
+}
+
+#ChatBox::-webkit-scrollbar-thumb:hover {
+    background-color: var(--orange);
+}
 
 /*
 LOGIN
@@ -74,7 +95,7 @@ LOGIN
   }
   
   #auth-form button:hover {
-    background-color: var(--orange);
+    background-color: var(--blue);
   }
   
   #log-reg-toggle {
@@ -82,17 +103,14 @@ LOGIN
     padding: 10px;
     border: none;
     border-radius: 5px;
-    background-color: var(--blue);
-    color: var(--bg);
+    background-color: transparent;
+    color: var(--orange);
     font-weight: bold;
     cursor: pointer;
     font-size: 14px;
     
   }
   
-  #log-reg-toggle:hover {
-    background-color: var(--blue);
-  }
   
   #log-message {
     margin-top: 10px;
@@ -104,6 +122,18 @@ LOGIN
 /*
 CHAT
 */
+
+#themeToggle{
+    color: var(--fg);
+    background: none;
+    border: none;
+    user-select: none;
+    font-size: 30px;
+}
+#themeToggle:focus {
+    outline: none;
+    box-shadow: none;
+}
 #top-bar {
     display: flex;
     justify-content: space-between;
@@ -117,7 +147,7 @@ CHAT
 }
 
 #logout-button {
-    color: var(--blue);
+    color: var(--red);
     background: none;
     border: none;
     cursor: pointer;
@@ -185,6 +215,7 @@ CHAT
 }
 
 #ChatBox button {
+    user-select: none;
     color: var(--yellow);
     background: none;
     border: none;
@@ -204,7 +235,6 @@ CHAT
 #ChatBox .SelfMessage button {
     pointer-events: none;
     cursor: not-allowed;
-    color: var(--orange);
 }
 .OtherMessage {
     display: inline-block;

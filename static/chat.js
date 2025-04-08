@@ -1,5 +1,7 @@
-//let url="://127.0.0.1:8080"
-let url="://rust-chat-um86.onrender.com"
+//let http_url="http://127.0.0.1:8080"
+//let ws_url="ws://127.0.0.1:8080"
+let http_url="https://rust-chat-um86.onrender.com"
+let ws_url="wss://rust-chat-um86.onrender.com"
 
 
 let socket
@@ -8,7 +10,7 @@ let username
 
 
 //CHAT
-fetch(`https${url}/auth-check`, {
+fetch(`${http_url}/auth-check`, {
     credentials: "include"
   })
   .then(res => res.json())
@@ -41,7 +43,7 @@ function ToggleStatus(status){
 
 function ConnectSocket() {
     ToggleStatus(0);
-    socket = new WebSocket(`wss${url}/chat`);
+    socket = new WebSocket(`${ws_url}/chat`);
     socket.onopen = () => {
         ToggleStatus(1);
         let messagesDiv = document.getElementById("ChatBox");
@@ -75,7 +77,10 @@ let msg_type = "broadcast", dm_recipient;
 
 document.getElementById("ChatBox").addEventListener("click", (event) => {
     if (event.target.tagName === "BUTTON") {
-        const button_text = event.target.textContent.trim();        
+        let button_text = event.target.textContent.trim();        
+        if (button_text.includes("::")) {
+            button_text = button_text.split("::").pop().trim();
+        }
         const messageBox = document.getElementById("MessageBox");
         const existingInfo = document.querySelector("#MessageBox h4");
         if (existingInfo) existingInfo.remove();
@@ -84,12 +89,25 @@ document.getElementById("ChatBox").addEventListener("click", (event) => {
             msg_type = "dm"; 
             dm_recipient = button_text;
             const info = document.createElement("h4");
-            info.textContent = `Whisper -> ${dm_recipient}:`;
+            info.textContent = `Whisper -> ${dm_recipient}`;
             messageBox.prepend(info); 
         } else {
             msg_type = "broadcast"; 
             dm_recipient = null;
         }
+        document.getElementById("ClientMessage").focus();
+    }
+});
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        msg_type = "broadcast";
+        dm_recipient = null;
+        const existingInfo = document.querySelector("#MessageBox h4");
+        if (existingInfo) {
+            existingInfo.remove();
+        }
+        document.getElementById("ClientMessage").focus();
+
     }
 });
 
