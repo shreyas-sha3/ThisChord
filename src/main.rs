@@ -251,7 +251,7 @@ async fn handle_socket(
 
     users.write().await.insert(username.clone(), sender.clone());
 
-    let connection_message = json!(["SERVER", format!("{} has entered the chat.", username)]).to_string();
+    let connection_message = json!(["SERVER", format!("{} has entered the chat.", username), "broadcast", null]).to_string();
     tx.send((connection_message, "SERVER".to_string())).ok();
 
     let cloned_username = username.clone();
@@ -279,7 +279,7 @@ async fn handle_socket(
     
             match serde_json::from_str::<ClientMessage>(trimmed) {
                 Ok(ClientMessage::DirectMessage { to, msg }) => {
-                    let dm_text = json!([msg]).to_string();
+                    let dm_text = json!([username, msg, "dm", to]).to_string();
                     let users_map = users.read().await;
     
                     if let Some(recipient_sender) = users_map.get(&to) {
@@ -287,7 +287,7 @@ async fn handle_socket(
                     }
     
                     // Echo back to sender
-                    let echo_text = json!([msg]).to_string();
+                    let echo_text = json!([username, msg, "dm", to]).to_string();
                     sender.lock().await.send(WsMessage::text(echo_text)).await.ok();
                 }
     
@@ -299,12 +299,12 @@ async fn handle_socket(
                                 .cloned()
                                 .collect::<Vec<_>>()
                                 .join(", ");
-                            let user_msg = json!(["SERVER", format!("Online users: {}", user_list)]).to_string();
+                            let user_msg = json!(["SERVER", format!("Online users: {}", user_list), "broadcast", null]).to_string();
                             sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
                         }
     
                         ":q" => {
-                            let exit_msg = json!(["SERVER", "You have disconnected successfully."]).to_string();
+                            let exit_msg = json!(["SERVER", "You have disconnected successfully.", "broadcast", null]).to_string();
                             sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
                             users.write().await.remove(&username);
                             sender.lock().await.close().await.ok();
@@ -312,7 +312,7 @@ async fn handle_socket(
                         }
     
                         _ => {
-                            let json_msg = json!([username, msg]).to_string();
+                            let json_msg = json!([username, msg, "broadcast", null]).to_string();
     
                             {
                                 let mut history = history_clone.lock().await;
@@ -328,7 +328,7 @@ async fn handle_socket(
                 }
     
                 Err(_) => {
-                    let warn_msg = json!(["SERVER", "Invalid message format."]).to_string();
+                    let warn_msg = json!(["SERVER", "Invalid message format.", "broadcast", null]).to_string();
                     sender.lock().await.send(WsMessage::text(warn_msg)).await.ok();
                 }
             }
@@ -337,7 +337,7 @@ async fn handle_socket(
     
     println!("{} disconnected", username);
     users.write().await.remove(&username);
-    let disconnect_message = json!(["SERVER", format!("{} has left the chat.", username)]).to_string();
+    let disconnect_message = json!(["SERVER", format!("{} has left the chat.", username), "broadcast", null]).to_string();
     tx.send((disconnect_message, "SERVER".to_string())).ok();
 }
 

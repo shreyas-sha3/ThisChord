@@ -55,11 +55,23 @@ function ConnectSocket() {
         ToggleStatus(-1);
     };
     
-    socket.onmessage = (event) =>{ console.log("Message received:", event.data);
-    displayMessage(event.data);
-    }
+    socket.onmessage = (event) => {
+        console.log("Message received:", event.data);
+        const parsed = JSON.parse(event.data);
+    
+        // Save to the appropriate history
+        const [sender, messageText, msgType, targetUser] = parsed;
+        const key = msgType === "dm"
+            ? (sender === username ? targetUser : sender)  // DM partner
+            : null;  // public chat
+    
+        const history = loadChat(key);
+        history.push(parsed);  // [sender, msg, type, to]
+        saveChat(key, history);
+    
+        displayMessage(event.data);
+    };
 }
-
 
 function sendMessage(event) {
     event.preventDefault();
@@ -74,9 +86,16 @@ function sendMessage(event) {
             payload.to = dm_recipient;
         }
         socket.send(JSON.stringify(payload));
+        const outgoingMsg = [username, msg, msg_type, dm_recipient || null];
+        const history = loadChat(dm_recipient);
+        history.push(outgoingMsg);
+        saveChat(dm_recipient, history);
+
+        displayMessage(JSON.stringify(outgoingMsg));
         MessageBox.value = "";
     }
 }
+
 
 let msg_type = "broadcast", dm_recipient;
 dm_recipient = null;
@@ -92,15 +111,16 @@ function loadChat(username) {
 function renderChatMessages(messages) {
     const chatBox = document.getElementById('ChatBox');
     chatBox.innerHTML = '';
-    lastUser = ""; // Reset to re-show usernames properly
+    lastUser = "";
     messages.forEach(msg => {
-        if (typeof msg === "string") {
-            displayMessage(msg);
+        if (Array.isArray(msg)) {
+            displayMessage(JSON.stringify(msg));  // [sender, msg, type, to]
         } else {
-            displayMessage(JSON.stringify(msg));
+            displayMessage(msg);
         }
     });
 }
+
 
 function appendMessage(username, message) {
     const messages = loadChat(username);
@@ -176,18 +196,19 @@ document.addEventListener("keydown", function (event) {
 
 let lastUser=""
 function displayMessage(text) {
-    let user, message, messageContainer;
+    let user, message, msgType = "broadcast", to = null;
     try {
-        [user, message] = JSON.parse(text);
+        const parsed = JSON.parse(text);
+        [user, message, msgType, to] = parsed;
     } catch {
         message = text;
     }
 
-    let messagesDiv = document.getElementById("ChatBox");
-    messageContainer = document.createElement("div");
+    const messagesDiv = document.getElementById("ChatBox");
+    const messageContainer = document.createElement("div");
     const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 40;
 
-    if (user != lastUser) {
+    if (user !== lastUser) {
         const messageUser = document.createElement("button");
         messageUser.textContent = user;
         messageContainer.appendChild(messageUser);
@@ -195,20 +216,20 @@ function displayMessage(text) {
     }
 
     const messageContent = document.createElement("p");
-
-    // Convert newlines to <br> and escape HTML
     messageContent.innerHTML = message
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/\n/g, "<br>");
-
     messageContainer.appendChild(messageContent);
-    messagesDiv.appendChild(messageContainer);
 
     messageContainer.classList.add(
-        user === "SERVER" ? "ServerMessage" : (user === username ? "SelfMessage" : "OtherMessage")
+        user === "SERVER" ? "ServerMessage" :
+        user === username ? "SelfMessage" :
+        "OtherMessage"
     );
+
+    messagesDiv.appendChild(messageContainer);
 
     if (user === username || nearBottom) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
