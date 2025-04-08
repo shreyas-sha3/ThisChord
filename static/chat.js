@@ -246,6 +246,4 @@ function displayMessage(text) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    // Save to history
-    appendMessage(isDM ? (user === username ? to : user) : null, data);
 }
