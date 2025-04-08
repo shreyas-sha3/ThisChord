@@ -130,6 +130,7 @@
   }
   
   .dm-btn {
+    text-decoration: solid;
     background: none;
     border: none;
     color: var(--fg);
@@ -284,7 +285,9 @@
     text-align: center;
     color: var(--yellow);
 }
-
+#ChatBox .ServerMessage button{
+  color: var(--blue);
+}
 #ChatBox .ServerMessage button,
 #ChatBox .SelfMessage button {
     pointer-events: none;

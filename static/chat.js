@@ -86,12 +86,6 @@ function sendMessage(event) {
             payload.to = dm_recipient;
         }
         socket.send(JSON.stringify(payload));
-        const outgoingMsg = [username, msg, msg_type, dm_recipient || null];
-        const history = loadChat(dm_recipient);
-        history.push(outgoingMsg);
-        saveChat(dm_recipient, history);
-
-        displayMessage(JSON.stringify(outgoingMsg));
         MessageBox.value = "";
     }
 }
@@ -113,14 +107,13 @@ function renderChatMessages(messages) {
     chatBox.innerHTML = '';
     lastUser = "";
     messages.forEach(msg => {
-        if (Array.isArray(msg)) {
-            displayMessage(JSON.stringify(msg));  // [sender, msg, type, to]
-        } else {
+        if (typeof msg === "string") {
             displayMessage(msg);
+        } else {
+            displayMessage(JSON.stringify(msg));
         }
     });
 }
-
 
 function appendMessage(username, message) {
     const messages = loadChat(username);
@@ -196,12 +189,30 @@ document.addEventListener("keydown", function (event) {
 
 let lastUser=""
 function displayMessage(text) {
-    let user, message, msgType = "broadcast", to = null;
+    let data;
     try {
-        const parsed = JSON.parse(text);
-        [user, message, msgType, to] = parsed;
+        data = JSON.parse(text);
     } catch {
-        message = text;
+        return;
+    }
+
+    const [user, message, type, to] = data;
+    const isDM = type === "dm";
+    const isSelf = user === username;
+    const isForMe = to === username;
+    const isFromMe = isSelf;
+    const isInDMView = msg_type === "dm";
+
+    // DM messages: show only if we're in the right DM context
+    if (isDM) {
+        if (dm_recipient !== user && dm_recipient !== to) {
+            // Not our current DM thread, just save
+            appendMessage(user === username ? to : user, data);
+            return;
+        }
+    } else if (msg_type === "dm") {
+        // Don't show broadcast messages while in DM view
+        return;
     }
 
     const messagesDiv = document.getElementById("ChatBox");
@@ -223,15 +234,18 @@ function displayMessage(text) {
         .replace(/\n/g, "<br>");
     messageContainer.appendChild(messageContent);
 
+    // === Styling ===
     messageContainer.classList.add(
         user === "SERVER" ? "ServerMessage" :
-        user === username ? "SelfMessage" :
+        isSelf ? "SelfMessage" :
         "OtherMessage"
     );
 
     messagesDiv.appendChild(messageContainer);
-
-    if (user === username || nearBottom) {
+    if (isSelf || nearBottom) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
+    // Save to history
+    appendMessage(isDM ? (user === username ? to : user) : null, data);
 }
