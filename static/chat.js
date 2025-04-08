@@ -64,10 +64,8 @@ function ConnectSocket() {
         const key = msgType === "dm"
             ? (sender === username ? targetUser : sender)  // DM partner
             : null;  // public chat
-    
-        const history = loadChat(key);
-        history.push(parsed);  // [sender, msg, type, to]
-        saveChat(key, history);
+            const history = loadChat(key);
+
     
         displayMessage(event.data);
     };
@@ -199,16 +197,11 @@ function displayMessage(text) {
     const [user, message, type, to] = data;
     const isDM = type === "dm";
     const isSelf = user === username;
-    const isForMe = to === username;
-    const isFromMe = isSelf;
-    const isInDMView = msg_type === "dm";
 
     // DM messages: show only if we're in the right DM context
     if (isDM) {
-        if (dm_recipient !== user && dm_recipient !== to) {
-            // Not our current DM thread, just save
-            appendMessage(user === username ? to : user, data);
-            return;
+        if (isDM && dm_recipient !== user && dm_recipient !== to) {
+            return; // not the current DM view
         }
     } else if (msg_type === "dm") {
         // Don't show broadcast messages while in DM view
