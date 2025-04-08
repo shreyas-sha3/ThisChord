@@ -279,7 +279,7 @@ async fn handle_socket(
     
             match serde_json::from_str::<ClientMessage>(trimmed) {
                 Ok(ClientMessage::DirectMessage { to, msg }) => {
-                    let dm_text = json!([format!("Whisper::{}", username), msg]).to_string();
+                    let dm_text = json!([msg]).to_string();
                     let users_map = users.read().await;
     
                     if let Some(recipient_sender) = users_map.get(&to) {
@@ -287,7 +287,7 @@ async fn handle_socket(
                     }
     
                     // Echo back to sender
-                    let echo_text = json!([username, format!("Whisper::{}\n{}", to, msg)]).to_string();
+                    let echo_text = json!([msg]).to_string();
                     sender.lock().await.send(WsMessage::text(echo_text)).await.ok();
                 }
     
