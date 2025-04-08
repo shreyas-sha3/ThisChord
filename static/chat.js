@@ -158,7 +158,8 @@ document.getElementById("sendBtn").addEventListener("click", () => {
     const msg = messageInput.value.trim();
     if (!msg) return;
 
-    appendMessage(dm_recipient, `You: ${msg}`);
+    saveChat(dm_recipient, [...loadChat(dm_recipient), [username, msg]]);
+    displayMessage(JSON.stringify([username, msg]));
     messageInput.value = '';
 });
 
