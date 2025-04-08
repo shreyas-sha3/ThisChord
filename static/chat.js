@@ -64,7 +64,11 @@ function ConnectSocket() {
             ? (sender === username ? targetUser : sender)
             : null;
     
-        appendMessage(key, parsed); 
+            const messages = loadChat(key);
+            messages.push(parsed);
+            saveChat(key, messages);
+
+    displayMessage(event.data);
     };
     
 }
@@ -102,6 +106,15 @@ function renderChatMessages(messages) {
     const chatBox = document.getElementById('ChatBox');
     chatBox.innerHTML = '';
     lastUser = "";
+
+    if (messages.length === 0) {
+        const empty = document.createElement("p");
+        empty.textContent = "No messages yet!";
+        empty.classList.add("EmptyMessage");
+        chatBox.appendChild(empty);
+        return;
+    }
+
     messages.forEach(msg => {
         if (typeof msg === "string") {
             displayMessage(msg);
@@ -110,6 +123,7 @@ function renderChatMessages(messages) {
         }
     });
 }
+
 
 function appendMessage(username, message) {
     const messages = loadChat(username);
@@ -196,9 +210,15 @@ function displayMessage(text) {
     const isDM = type === "dm";
     const isSelf = user === username;
 
-    //Save the message to localStorage first
-    const key = isDM ? (isSelf ? to : user) : null;
-    appendMessage(key, data); // saves it no matter what
+    if (isDM) {
+        if (dm_recipient !== user && dm_recipient !== to) {
+            console.log(`Skipping DM message not in current view: ${user} -> ${to}`);
+            return;
+        }
+    } else if (msg_type === "dm") {
+        console.log(`Skipping public message while in DM view`);
+        return;
+    }
 
     //Only show the message if it matches current view
     if (isDM) {
@@ -211,7 +231,6 @@ function displayMessage(text) {
 
     const messagesDiv = document.getElementById("ChatBox");
     const messageContainer = document.createElement("div");
-    const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 50;
 
     if (user !== lastUser) {
         const messageUser = document.createElement("button");
@@ -236,7 +255,8 @@ function displayMessage(text) {
 
     messagesDiv.appendChild(messageContainer);
 
-    if (nearBottom || isSelf) {
+    const shouldScroll = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 100;
+    if (shouldScroll || isSelf) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 }
