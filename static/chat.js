@@ -92,10 +92,13 @@ function loadChat(username) {
 function renderChatMessages(messages) {
     const chatBox = document.getElementById('ChatBox');
     chatBox.innerHTML = '';
+    lastUser = ""; // Reset to re-show usernames properly
     messages.forEach(msg => {
-        const p = document.createElement('p');
-        p.textContent = msg;
-        chatBox.appendChild(p);
+        if (typeof msg === "string") {
+            displayMessage(msg);
+        } else {
+            displayMessage(JSON.stringify(msg));
+        }
     });
 }
 
