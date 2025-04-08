@@ -144,6 +144,7 @@
     margin-bottom: 10px; 
     transition: background-color 0.2s;
     font-size: 18px; 
+    font-weight: bold;
   }
   
   .dm-btn:hover {

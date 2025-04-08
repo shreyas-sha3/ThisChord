@@ -64,7 +64,7 @@ function ConnectSocket() {
             ? (sender === username ? targetUser : sender)
             : null;
     
-        appendMessage(key, parsed); // ✅ This saves and rerenders
+        appendMessage(key, parsed); 
     };
     
 }
@@ -196,19 +196,22 @@ function displayMessage(text) {
     const isDM = type === "dm";
     const isSelf = user === username;
 
-    // DM messages: show only if we're in the right DM context
+    //Save the message to localStorage first
+    const key = isDM ? (isSelf ? to : user) : null;
+    appendMessage(key, data); // saves it no matter what
+
+    //Only show the message if it matches current view
     if (isDM) {
-        if (isDM && dm_recipient !== user && dm_recipient !== to) {
-            return; // not the current DM view
+        if (dm_recipient !== user && dm_recipient !== to) {
+            return;
         }
     } else if (msg_type === "dm") {
-        // Don't show broadcast messages while in DM view
         return;
     }
 
     const messagesDiv = document.getElementById("ChatBox");
     const messageContainer = document.createElement("div");
-    const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 40;
+    const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 50;
 
     if (user !== lastUser) {
         const messageUser = document.createElement("button");
@@ -225,7 +228,6 @@ function displayMessage(text) {
         .replace(/\n/g, "<br>");
     messageContainer.appendChild(messageContent);
 
-    // === Styling ===
     messageContainer.classList.add(
         user === "SERVER" ? "ServerMessage" :
         isSelf ? "SelfMessage" :
@@ -233,8 +235,9 @@ function displayMessage(text) {
     );
 
     messagesDiv.appendChild(messageContainer);
-    if (isSelf || nearBottom) {
+
+    if (nearBottom || isSelf) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
-
 }
+
