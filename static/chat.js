@@ -59,16 +59,14 @@ function ConnectSocket() {
         console.log("Message received:", event.data);
         const parsed = JSON.parse(event.data);
     
-        // Save to the appropriate history
         const [sender, messageText, msgType, targetUser] = parsed;
         const key = msgType === "dm"
-            ? (sender === username ? targetUser : sender)  // DM partner
-            : null;  // public chat
-            const history = loadChat(key);
-
+            ? (sender === username ? targetUser : sender)
+            : null;
     
-        displayMessage(event.data);
+        appendMessage(key, parsed); // ✅ This saves and rerenders
     };
+    
 }
 
 function sendMessage(event) {
