@@ -16,8 +16,10 @@ fetch(`${http_url}/auth-check`, {
   .then(res => res.json())
   .then(data => {
     if (data.status === "ok") {
-    username = data.username;
     ConnectSocket()
+    username = data.username;
+    let usernameElement = document.getElementById("username");
+    usernameElement.textContent = username;
     } else {
     window.location.href = "./auth.html";
     }
