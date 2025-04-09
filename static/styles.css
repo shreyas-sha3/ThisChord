@@ -130,27 +130,34 @@
   }
   
   .dm-btn {
-    text-decoration: solid;
-    background: none;
-    border: none;
     color: var(--fg);
+    background-color: var(--bg);
+    border: none;
     text-align: left;
     padding: 15px 8px;
     border-radius: 4px;
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
     margin-bottom: 10px; 
     transition: background-color 0.2s;
     font-size: 18px; 
-    font-weight: bold;
   }
   
   .dm-btn:hover {
-    background-color: var(--bg);
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
   }
-  
+  .notification-dot {
+    height: 8px;
+    width: 8px;
+    background-color: var(--orange);
+    border-radius: 50%;
+    margin-right: 8px;
+  }
+
   #user-bar {
     height: 76px;
     width: 100%;
@@ -171,8 +178,8 @@
   }
   
   #themeToggle {
-    width: 12px;
-    height: 12px;
+    width: 13px;
+    height: 13px;
     background-color: var(--blue); /* Online status color */
     border-radius: 50%;
     box-shadow: 0 0 4px var(--blue);
@@ -219,7 +226,7 @@
     font-weight: 600;
     padding: 10px 0;
     border-bottom: 1px solid var(--light-gray);
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   
   #ChatBox {
@@ -311,9 +318,16 @@
 
   
   /* === Message Input === */
+  #emoji-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+  
   #MessageBox {
     display: flex;
-    padding: 16px;
+    padding: 16px 16px 16px 5px ;
     gap: 10px;
     background-color: var(--dark-gray);
   }
