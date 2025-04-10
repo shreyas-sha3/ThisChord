@@ -7,6 +7,7 @@ const toggleBtn = document.getElementById("log-reg-toggle");
 const formTitle = document.getElementById("form-title");
 
 let mode = "login"; // 'login' or 'register'
+let notificationSound;
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -22,6 +23,14 @@ form.addEventListener("submit", async (e) => {
   const text = await response.text();
 
   if (mode === "login" && text.includes("Login successful")) {
+    // ✅ Enable sound
+    notificationSound = new Audio("./startup.mp3");
+    notificationSound.play().then(() => {
+      console.log("Sound enabled");
+    }).catch((err) => {
+      console.warn("🔇 Sound blocked:", err);
+    });
+
     window.location.href = "/index.html";
   } else {
     msg.textContent = text;
@@ -31,7 +40,9 @@ form.addEventListener("submit", async (e) => {
 toggleBtn.addEventListener("click", () => {
   mode = mode === "login" ? "register" : "login";
   formTitle.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-  form.querySelector("button[type='submit']").textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
-  toggleBtn.textContent = mode === "login" ? "Switch to Register" : "Switch to Login";
+  form.querySelector("button[type='submit']").textContent =
+    mode.charAt(0).toUpperCase() + mode.slice(1);
+  toggleBtn.textContent =
+    mode === "login" ? "Switch to Register" : "Switch to Login";
   msg.textContent = "";
 });
