@@ -1,18 +1,31 @@
 use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::sync::Arc;
-use futures_util::{SinkExt, StreamExt};
+
+use futures_util::{SinkExt, StreamExt}; // Required for WebSocket streams
+
 use tokio::sync::{broadcast, Mutex, RwLock};
-use warp::ws::{Message as WsMessage, WebSocket};
-use warp::{Reply, http::header::{SET_COOKIE, HeaderValue}};
-use warp::cors::Cors;
-use warp::Filter;
+
+use warp::ws::Message as WsMessage;
+use warp::{Filter, Reply, http::header::{SET_COOKIE, HeaderValue}};
+
 use serde::{Serialize, Deserialize};
 use serde_json::json;
+
 use dotenvy::dotenv;
+
 use sqlx::PgPool;
+
 use regex::Regex;
 use uuid::Uuid;
+
+mod db;
+use db::store_direct_message;
+mod socket; 
+use crate::socket::handle_socket;
+mod message;
+
+
 
 #[tokio::main]
 async fn main() {
@@ -21,7 +34,7 @@ async fn main() {
         .allow_credentials(true)
         .allow_headers(vec!["Content-Type"]);
 
-    dotenv().ok();
+        dotenv().ok();
 
     let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
@@ -152,8 +165,6 @@ async fn main() {
             })
     };
 
-    let ping = warp::path("ping").map(|| warp::reply::json(&"pong"));
-
     let chat = {
         let tx = tx.clone();
         let users = users.clone();
@@ -180,7 +191,7 @@ async fn main() {
                         {
                             Ok(username) => {
                                 let reply = ws.on_upgrade(move |socket| {
-                                    handle_socket(socket, tx, users, history, username)
+                                    handle_socket(socket, tx, users, history, db, username)
                                 });
                                 Ok::<_, warp::Rejection>(reply.into_response())
                             }
@@ -203,11 +214,13 @@ async fn main() {
             })
     };
 
+    let ping = warp::path("ping").map(|| warp::reply::json(&"pong"));
+
     let routes = register
         .or(login)
         .or(ping)
-        .or(chat)
         .or(auth_check)
+        .or(chat)
         .with(cors);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string()).parse().expect("Invalid PORT value");
@@ -215,128 +228,4 @@ async fn main() {
     warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 }
     
-
-async fn handle_socket(
-    ws: WebSocket,
-    tx: broadcast::Sender<(String, String)>,
-    users: Arc<RwLock<HashMap<String, Arc<Mutex<futures_util::stream::SplitSink<WebSocket, WsMessage>>>>>>,
-    message_history: Arc<Mutex<VecDeque<String>>>,
-    username: String,
-) {
-    let (sender, mut receiver) = ws.split();
-    let sender = Arc::new(Mutex::new(sender));
-    let mut rx = tx.subscribe();
-
-    #[derive(Deserialize, Serialize, Debug)]
-    #[serde(tag = "type")]
-    pub enum ClientMessage {
-        #[serde(rename = "dm")]
-        DirectMessage {
-            to: String,
-            msg: String,
-        },
-        #[serde(rename = "broadcast")]
-        BroadcastMessage {
-            msg: String,
-        },
-    }
-
-    // Send message history
-    {
-        let history = message_history.lock().await;
-        for msg in history.iter() {
-            sender.lock().await.send(WsMessage::text(msg.clone())).await.ok();
-        }
-    }
-
-    users.write().await.insert(username.clone(), sender.clone());
-
-    let connection_message = json!(["SERVER", format!("{} has entered the chat.", username), "broadcast", null]).to_string();
-    tx.send((connection_message, "SERVER".to_string())).ok();
-    let cloned_username = username.clone();
-    let sender_clone = sender.clone();
-    let users_clone = users.clone();
-
-    // Spawn a task to handle broadcast messages for this user
-    tokio::spawn(async move {
-        while let Ok((msg, sender_name)) = rx.recv().await {
-            let users_lock = users_clone.read().await;
-            if  users_lock.contains_key(&cloned_username) {
-                sender_clone.lock().await.send(WsMessage::text(msg)).await.ok();
-            }
-        }
-    });
-
-    let history_clone = message_history.clone();
-
-    while let Some(Ok(msg)) = receiver.next().await {
-        if let Ok(text) = msg.to_str() {
-            let trimmed = text.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-    
-            match serde_json::from_str::<ClientMessage>(trimmed) {
-                Ok(ClientMessage::DirectMessage { to, msg }) => {
-                    let dm_text = json!([username, msg, "dm", to]).to_string();
-                    let users_map = users.read().await;
-    
-                    if let Some(recipient_sender) = users_map.get(&to) {
-                        recipient_sender.lock().await.send(WsMessage::text(dm_text.clone())).await.ok();
-                    }
-    
-                    // Echo back to sender
-                    let echo_text = json!([username, msg, "dm", to]).to_string();
-                    sender.lock().await.send(WsMessage::text(echo_text)).await.ok();
-                }
-    
-                Ok(ClientMessage::BroadcastMessage { msg }) => {
-                    match msg.as_str() {
-                        "/users" => {
-                            let user_list = users.read().await
-                                .keys()
-                                .cloned()
-                                .collect::<Vec<_>>()
-                                .join(", ");
-                            let user_msg = json!(["SERVER", format!("Online users: {}", user_list), "broadcast", null]).to_string();
-                            sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
-                        }
-    
-                        ":q" => {
-                            let exit_msg = json!(["SERVER", "You have disconnected successfully.", "broadcast", null]).to_string();
-                            sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();
-                            users.write().await.remove(&username);
-                            sender.lock().await.close().await.ok();
-                            break;
-                        }
-    
-                        _ => {
-                            let json_msg = json!([username, msg, "broadcast", null]).to_string();
-    
-                            {
-                                let mut history = history_clone.lock().await;
-                                if history.len() >= 30 {
-                                    history.pop_front();
-                                }
-                                history.push_back(json_msg.clone());
-                            }
-    
-                            tx.send((json_msg, username.clone())).ok();
-                        }
-                    }
-                }
-    
-                Err(_) => {
-                    let warn_msg = json!(["SERVER", "Invalid message format.", "broadcast", null]).to_string();
-                    sender.lock().await.send(WsMessage::text(warn_msg)).await.ok();
-                }
-            }
-        }
-    }
-    
-    println!("{} disconnected", username);
-    users.write().await.remove(&username);
-    let disconnect_message = json!(["SERVER", format!("{} has left the chat.", username), "broadcast", null]).to_string();
-    tx.send((disconnect_message, "SERVER".to_string())).ok();
-}
 

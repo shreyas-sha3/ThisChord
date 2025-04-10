@@ -315,6 +315,19 @@
     border-radius: 4px;
   }
   
+  .fade-out {
+    opacity: 0;
+    transition: opacity 150ms ease-in;
+}
+.fade-in {
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+}
+.LoadingMessage {
+    text-align: center;
+    font-style: italic;
+    color: #888;
+}
 
   
   /* === Message Input === */

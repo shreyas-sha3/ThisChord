@@ -47,8 +47,9 @@ function ConnectSocket() {
     ToggleStatus(0);
     socket = new WebSocket(`${ws_url}/chat`);
     socket.onopen = () => {
+        socket.send(JSON.stringify({ type: "fetch_dm_list" }));
         ToggleStatus(1);
-        restoreDMs();
+        //restoreDMs();
 
         // Start keep-alive ping every 5 minutes
         pingInterval = setInterval(() => {
@@ -64,25 +65,41 @@ function ConnectSocket() {
     };
 
     socket.onmessage = (event) => {
-        //console.log("Message received:", event.data);
         const parsed = JSON.parse(event.data);
-        const [sender, messageText, msgType, targetUser] = parsed;
-        const key = msgType === "dm"
-            ? (sender === username ? targetUser : sender)
-            : null;
     
-            const messages = loadChat(key);
-            messages.push(parsed);
-            saveChat(key, messages);
-
-    displayMessage(event.data);
-
-    if (document.hidden) {
-        notificationSound.play().catch((err) => {
-                console.warn("Notification sound failed to play:", err);
-        });
+        if (parsed.type === "dm_list") {
+            for (const username of parsed.users) {
+                createDM(username); // your existing function
+            }
+            return;
+        }
+    
+        if (parsed.type === "dm_history") {
+            if (parsed.with === dm_recipient) {
+                renderChatMessages(parsed.messages);
+            }
+            return;
+        }
+    
+        // only destructure if it's actually an array
+        if (Array.isArray(parsed)) {
+            const [sender, messageText, msgType, targetUser] = parsed;
+            const key = msgType === "dm"
+                ? (sender === username ? targetUser : sender)
+                : null;
+                
+            displayMessage(event.data);
+    
+            if (document.hidden) {
+                notificationSound.play().catch((err) => {
+                    console.warn("Notification sound failed to play:", err);
+                });
+            }
+        } else {
+            console.warn("Unknown message format:", parsed);
+        }
     };
-}
+    
 }
 function sendMessage(event) {
     event.preventDefault();
@@ -106,7 +123,7 @@ let msg_type = "broadcast", dm_recipient;
 dm_recipient = null;
 
 function saveChat(username, messages) {
-    const trimmed = messages.slice(-100); // keep only last 100 messages
+    const trimmed = messages.slice(-30); 
     localStorage.setItem(`chat_${username || 'public'}`, JSON.stringify(trimmed));
 }
 
@@ -114,35 +131,56 @@ function loadChat(username) {
     return JSON.parse(localStorage.getItem(`chat_${username || 'public'}`)) || [];
 }
 
-function renderChatMessages(messages) {
-    const chatBox = document.getElementById('ChatBox');
-    chatBox.innerHTML = '';
-    lastUser = "";
 
-    if (messages.length === 0) {
-        const empty = document.createElement("p");
-        empty.textContent = "No messages yet!";
-        empty.classList.add("EmptyMessage");
-        chatBox.appendChild(empty);
-        return;
-    }
+function renderChatMessages(messages) {
+    const chatBox = document.getElementById("ChatBox");
+    chatBox.innerHTML = ""; // Clear existing messages
+    lastUser = "";
 
     messages.forEach(msg => {
         if (typeof msg === "string") {
-            displayMessage(msg);
-        } else {
-            displayMessage(JSON.stringify(msg));
+            const fallback = document.createElement("div");
+            fallback.textContent = msg;
+            chatBox.appendChild(fallback);
+            return;
         }
+
+        const { sender, message } = msg;
+        const element = createMessageElement(sender, message);
+        chatBox.appendChild(element);
     });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 
-function appendMessage(username, message) {
-    const messages = loadChat(username);
-    messages.push(message);
-    saveChat(username, messages);
-    renderChatMessages(messages);
+
+// function appendMessage(username, message) {
+//     const messages = loadChat(username);
+//     messages.push(message);
+//     saveChat(username, messages);
+//     renderChatMessages(messages);
+// }
+
+function showLoadingSkeleton() {
+    const chatBox = document.getElementById('ChatBox');
+    chatBox.innerHTML = '';
+    const loadingMsg = document.createElement("p");
+    loadingMsg.textContent = "Loading messages";
+    loadingMsg.classList.add("LoadingMessage"); 
+    chatBox.appendChild(loadingMsg);
+    let dotCount = 0;
+    const interval = setInterval(() => {
+        dotCount = (dotCount + 1) % 4;
+        loadingMsg.textContent = "Loading messages" + ".".repeat(dotCount);
+    }, 500);
+    //remove in 3 secs
+    setTimeout(() => {
+        clearInterval(interval);
+        loadingMsg.remove();
+    }, 3000);
 }
+
 
 function switchToDM(username) {
     const chatTitle = document.getElementById('ChatTitle');
@@ -151,14 +189,27 @@ function switchToDM(username) {
     if (dm_recipient !== username) {
         msg_type = username ? "dm" : "broadcast";
         dm_recipient = username;
-        chatTitle.textContent = username ? `DM: ${dm_recipient}` : 'Public Chat';
-        renderChatMessages(loadChat(dm_recipient));
+
+        if (username) {
+            showLoadingSkeleton();
+            //renderChatMessages([]);
+            socket.send(JSON.stringify({ type: "load_dm", with: username }));
+        } else {
+            const cachedMessages = loadChat(username);
+            renderChatMessages(cachedMessages);
+
+            //renderChatMessages([]); // fallback for public chat
+        }
+
+        chatTitle.textContent = username ? `${dm_recipient}` : 'Public Chat';
         messageInput.placeholder = username ? `Message ${dm_recipient}...` : `Type a message...`;
     }
+
     requestAnimationFrame(() => {
         const messagesDiv = document.getElementById("ChatBox");
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
+
     // Remove notification dot if present
     const dmButtons = document.querySelectorAll(".dm-btn");
     dmButtons.forEach(btn => {
@@ -169,6 +220,7 @@ function switchToDM(username) {
     });
     messageInput.focus();
 }
+
 
 
 // === Clicking on a chat user ===
@@ -214,10 +266,10 @@ function createDM(dmUsername) {
     }
 }
 
-function restoreDMs() {
-    const dmList = JSON.parse(localStorage.getItem("dmList") || "[]");
-    dmList.forEach(username => createDM(username));
-}
+// function restoreDMs() {
+//     const dmList = JSON.parse(localStorage.getItem("dmList") || "[]");
+//     dmList.forEach(username => createDM(username));
+// }
 // === Server button resets to public chat ===
 document.querySelector('.server-btn:first-child').addEventListener('click', () => {
     switchToDM(null);
@@ -237,6 +289,40 @@ document.addEventListener("keydown", function (event) {
 });
 
 let lastUser=""
+
+
+//STYLE THE MESSAGES FOR RENDERING
+function createMessageElement(sender, message) {
+    const messageContainer = document.createElement("div");
+
+    if (sender !== lastUser) {
+        const messageUser = document.createElement("button");
+        messageUser.textContent = sender;
+        messageContainer.appendChild(messageUser);
+        lastUser = sender;
+    }
+
+    const messageContent = document.createElement("p");
+    messageContent.innerHTML = String(message)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+
+    messageContainer.appendChild(messageContent);
+
+    const isSelf = sender === username;
+
+    messageContainer.classList.add(
+        sender === "SERVER" ? "ServerMessage" :
+        isSelf ? "SelfMessage" :
+        "OtherMessage"
+    );
+
+    return messageContainer;
+}
+
+//FUNCTION CALLED WHEN NEW MESSAGE ARRIVES
 function displayMessage(text) {
     let data;
     try {
@@ -252,7 +338,7 @@ function displayMessage(text) {
     if (isDM) {
         if (dm_recipient !== user && dm_recipient !== to) {
             console.log(`Skipping DM message not in current view: ${user} -> ${to}`);
-            createDM(user) 
+            createDM(user);
             return;
         }
     } else if (msg_type === "dm") {
@@ -260,7 +346,6 @@ function displayMessage(text) {
         return;
     }
 
-    //Only show the message if it matches current view
     if (isDM) {
         if (dm_recipient !== user && dm_recipient !== to) {
             return;
@@ -270,30 +355,8 @@ function displayMessage(text) {
     }
 
     const messagesDiv = document.getElementById("ChatBox");
-    const messageContainer = document.createElement("div");
-
-    if (user !== lastUser) {
-        const messageUser = document.createElement("button");
-        messageUser.textContent = user;
-        messageContainer.appendChild(messageUser);
-        lastUser = user;
-    }
-
-    const messageContent = document.createElement("p");
-    messageContent.innerHTML = message
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br>");
-    messageContainer.appendChild(messageContent);
-
-    messageContainer.classList.add(
-        user === "SERVER" ? "ServerMessage" :
-        isSelf ? "SelfMessage" :
-        "OtherMessage"
-    );
-
-    messagesDiv.appendChild(messageContainer);
+    const element = createMessageElement(user, message);
+    messagesDiv.appendChild(element);
 
     const shouldScroll = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 100;
     if (shouldScroll || isSelf) {
@@ -302,11 +365,18 @@ function displayMessage(text) {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         });
     }
+    const key = isDM ? (user === username ? to : user) : null;
+    const messages = loadChat(key);    
+    messages.push({ sender: user, message, msgType: type });
+    
+    if (!isDM) {
+        saveChat(key, messages);
+    }
 }
 
 async function insertRandomEmoji() {
     const res = await fetch("https://unpkg.com/emoji.json/emoji.json");
-    const emoji = (await res.json())[Math.floor(Math.random() * 1000)].char;
+    const emoji = (await res.json())[Math.floor(Math.random() * 6500)].char;
     const input = document.getElementById("ClientMessage");
     input.setRangeText(emoji, input.selectionStart, input.selectionEnd, "end");
     input.focus();
@@ -319,4 +389,4 @@ if (logoutButton) {
   logoutButton.addEventListener("click", () => {
     document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     window.location.href = "/auth.html"; // Redirect to login page
-  });}
+  })}
