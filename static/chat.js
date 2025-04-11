@@ -1,7 +1,7 @@
-//let http_url="http://localhost:8080"
-//let ws_url="ws://localhost:8080"
-let http_url="https://rust-chat-um86.onrender.com"
-let ws_url="wss://rust-chat-um86.onrender.com"
+let http_url="http://localhost:8080"
+let ws_url="ws://localhost:8080"
+//let http_url="https://rust-chat-um86.onrender.com"
+//let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
 let username
@@ -51,14 +51,20 @@ function ConnectSocket() {
         ToggleStatus(1);
         //restoreDMs();
 
-        // Start keep-alive ping every 5 minutes
         pingInterval = setInterval(() => {
-            if (socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: "ping" }));
-            }
-        }, 10 * 60 * 1000); 
-    };
-
+            fetch(`${ur}/ping`, {
+                method: "GET", 
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.warn("Ping failed:", response.statusText);
+                }
+            })
+            .catch(err => {
+                console.error("Ping error:", err);
+            });
+        }, 10 * 60 * 1000);
+    }
     socket.onclose = () => {
         ToggleStatus(-1);
         clearInterval(pingInterval); 
@@ -73,14 +79,12 @@ function ConnectSocket() {
             }
             return;
         }
-    
         if (parsed.type === "dm_history") {
             if (parsed.with === dm_recipient) {
                 renderChatMessages(parsed.messages);
             }
             return;
         }
-    
         // only destructure if it's actually an array
         if (Array.isArray(parsed)) {
             const [sender, messageText, msgType, targetUser] = parsed;
@@ -144,15 +148,53 @@ function renderChatMessages(messages) {
             chatBox.appendChild(fallback);
             return;
         }
-
-        const { sender, message } = msg;
-        const element = createMessageElement(sender, message);
+        const { sender, message,timestamp  } = msg;
+        console.log(msg)
+        const element = createMessageElement(sender, message,timestamp);
         chatBox.appendChild(element);
     });
 
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
+
+function createMessageElement(sender, message , timestamp) {
+    const messageContainer = document.createElement("div");
+
+    if (sender !== lastUser) {
+        const messageUser = document.createElement("button");
+        messageUser.textContent = sender;
+        messageContainer.appendChild(messageUser);
+        lastUser = sender;
+    }
+
+    const messageContent = document.createElement("p");
+    messageContent.innerHTML = String(message)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const timeOnly = `${hours}:${minutes}`;
+    const timestampElement = document.createElement("p");
+    timestampElement.textContent = timeOnly;
+    timestampElement.classList.add("timestamp"); 
+
+    messageContainer.appendChild(messageContent);
+    messageContainer.appendChild(timestampElement);
+    const isSelf = sender === username;
+
+    messageContainer.classList.add(
+        sender === "SERVER" ? "ServerMessage" :
+        isSelf ? "SelfMessage" :
+        "OtherMessage"
+    );
+
+    return messageContainer;
+}
 
 
 // function appendMessage(username, message) {
@@ -180,33 +222,36 @@ function showLoadingSkeleton() {
         loadingMsg.remove();
     }, 3000);
 }
-
-
 function switchToDM(username) {
     const chatTitle = document.getElementById('ChatTitle');
     const messageInput = document.getElementById('ClientMessage');
+    const messagesDiv = document.getElementById("ChatBox");
 
     if (dm_recipient !== username) {
         msg_type = username ? "dm" : "broadcast";
         dm_recipient = username;
 
-        if (username) {
-            showLoadingSkeleton();
-            //renderChatMessages([]);
-            socket.send(JSON.stringify({ type: "load_dm", with: username }));
-        } else {
-            const cachedMessages = loadChat(username);
-            renderChatMessages(cachedMessages);
+        // Start fade out
+        messagesDiv.classList.add("fade-transition");
 
-            //renderChatMessages([]); // fallback for public chat
-        }
+        setTimeout(() => {
+            if (username) {
+                showLoadingSkeleton();
+                socket.send(JSON.stringify({ type: "load_dm", with: username }));
+            } else {
+                const cachedMessages = loadChat(username);
+                renderChatMessages(cachedMessages);
+            }
 
-        chatTitle.textContent = username ? `${dm_recipient}` : 'Public Chat';
-        messageInput.placeholder = username ? `Message ${dm_recipient}...` : `Type a message...`;
+            chatTitle.textContent = username ? `${dm_recipient}` : 'Public Chat';
+            messageInput.placeholder = username ? `Message ${dm_recipient}...` : `Type a message...`;
+
+            // Fade in
+            messagesDiv.classList.remove("fade-transition");
+        }, 200); // Wait for fade-out to finish
     }
 
     requestAnimationFrame(() => {
-        const messagesDiv = document.getElementById("ChatBox");
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
@@ -218,8 +263,10 @@ function switchToDM(username) {
             if (dot) dot.remove();
         }
     });
+
     messageInput.focus();
 }
+
 
 
 
@@ -291,36 +338,6 @@ document.addEventListener("keydown", function (event) {
 let lastUser=""
 
 
-//STYLE THE MESSAGES FOR RENDERING
-function createMessageElement(sender, message) {
-    const messageContainer = document.createElement("div");
-
-    if (sender !== lastUser) {
-        const messageUser = document.createElement("button");
-        messageUser.textContent = sender;
-        messageContainer.appendChild(messageUser);
-        lastUser = sender;
-    }
-
-    const messageContent = document.createElement("p");
-    messageContent.innerHTML = String(message)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br>");
-
-    messageContainer.appendChild(messageContent);
-
-    const isSelf = sender === username;
-
-    messageContainer.classList.add(
-        sender === "SERVER" ? "ServerMessage" :
-        isSelf ? "SelfMessage" :
-        "OtherMessage"
-    );
-
-    return messageContainer;
-}
 
 //FUNCTION CALLED WHEN NEW MESSAGE ARRIVES
 function displayMessage(text) {
@@ -331,7 +348,7 @@ function displayMessage(text) {
         return;
     }
 
-    const [user, message, type, to] = data;
+    let [user, message, type, to , timestamp] = data;
     const isDM = type === "dm";
     const isSelf = user === username;
 
@@ -355,7 +372,9 @@ function displayMessage(text) {
     }
 
     const messagesDiv = document.getElementById("ChatBox");
-    const element = createMessageElement(user, message);
+
+    if (!timestamp) timestamp = new Date().toISOString();
+    const element = createMessageElement(user, message,timestamp);
     messagesDiv.appendChild(element);
 
     const shouldScroll = messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - 100;
@@ -367,7 +386,13 @@ function displayMessage(text) {
     }
     const key = isDM ? (user === username ? to : user) : null;
     const messages = loadChat(key);    
-    messages.push({ sender: user, message, msgType: type });
+    
+    messages.push({ 
+        sender: user, 
+        message, 
+        msgType: type, 
+        timestamp 
+    });
     
     if (!isDM) {
         saveChat(key, messages);

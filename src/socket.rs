@@ -99,10 +99,11 @@ pub async fn handle_socket(
                             match load_direct_messages(&db, conversation_id, 100).await {
                                 Ok(messages) => {
                                     let sender_dm = sender_for_dm.clone(); 
-                                    for ChatMessage { sender, content, .. } in messages {
-                                        let dm_msg = json!([sender, content, "dm", with]).to_string();
+                                    for ChatMessage { sender, content, sent_at, .. } in messages {
+                                        let dm_msg = json!([sender, content, "dm", with, sent_at.to_rfc3339()]).to_string();
                                         sender_dm.lock().await.send(WsMessage::text(dm_msg)).await.ok();
                                     }
+                                    
                                 }
                                 Err(e) => {
                                     let err_msg = json!(["SERVER", format!("Failed to load chat history: {}", e), "broadcast", null]).to_string();
@@ -120,6 +121,7 @@ pub async fn handle_socket(
                         }
                     }
                 }
+                
 
                 Ok(ClientMessage::BroadcastMessage { msg }) => {
                     match msg.as_str() {

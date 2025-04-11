@@ -50,13 +50,18 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    width: 275px; /* 72 (server) + 240 (DMs) */
+    width: 275px;
+    gap: 10px; /* space between top and bottom */
+    padding: 10px;
   }
+  
   
   #sidebar-top {
     display: flex;
     flex-grow: 1;
     overflow: hidden;
+    border-right: 1px solid var(--light-gray);
+
   }
   
   /* === Server Bar === */
@@ -69,8 +74,8 @@
     padding: 12px 0;
     gap: 8px;
     overflow-y: auto;
-    border-right: 1px solid var(--light-gray);
-    
+    border-right: 0.5px solid var(--light-gray);
+
   }
   
   /* Server Buttons */
@@ -115,8 +120,8 @@
     padding: 10px;
     gap: 5px;
     overflow-y: auto;
-    border-right: 1px solid var(--light-gray);
     flex-grow: 1;
+
   }
   
   #dm-pane h3 {
@@ -140,10 +145,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 10px; 
+    margin-bottom: 5px; 
     transition: background-color 0.2s;
-    font-size: 18px; 
+    font-size: 15px; 
   }
   
   .dm-btn:hover {
@@ -160,17 +164,22 @@
 
   #user-bar {
     height: 76px;
-    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
-    background-color: var(--dark-gray);
-    border-top: 1px solid var(--light-gray);
-    border-right: 1px solid var(--light-gray);
+    padding: 16px;
     font-size: 14px;
+  border-bottom: 1px solid var(--light-gray);
+
   }
   
+  #sidebar-top,
+#user-bar {
+  border-radius: 16px;
+  background-color: var(--dark-gray);
+
+}
+
   #user-info {
     display: flex;
     align-items: center;
@@ -186,14 +195,15 @@
     border: none;
   }
   
-  #username {
-    font-weight: 600;
-    background-color: var(--bg);
-    padding: 6px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--light-gray);
-    color: var(--fg);
-  }
+#username {
+  font-weight: 600;
+  background-color: var(--bg);
+  padding: 6px 10px;
+  border-radius: 12px;  /* more rounded */
+  border: 1px solid var(--light-gray);
+  color: var(--fg);
+  box-shadow: 0 0 6px rgba(0,0,0,0.2);  /* soft glow */
+}
   
   #logout-button {
     color: var(--red);
@@ -219,15 +229,18 @@
 
   
   /* === Chat Area === */
-#ChatTitle {
+  #ChatTitle {
     text-align: center;
     color: var(--fg);
     font-size: 20px;
     font-weight: 600;
     padding: 10px 0;
     border-bottom: 1px solid var(--light-gray);
-    margin-bottom: 10px;
-  }
+    margin: 10px 16px 10px 16px;  /* Align horizontally */
+    border-radius: 12px ;  /* Top rounding */
+    background-color: var(--dark-gray);
+    
+    }
   
   #ChatBox {
     
@@ -241,7 +254,16 @@
     gap: 3px;
     width: 100%;
     scroll-behavior: smooth;
-}
+
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  
+  #ChatBox.fade-transition {
+    opacity: 0;
+    transition: opacity 0.25s ease-in-out;
+  }
+
 
 
 /* Default message styles */
@@ -315,14 +337,15 @@
     border-radius: 4px;
   }
   
-  .fade-out {
-    opacity: 0;
-    transition: opacity 150ms ease-in;
-}
-.fade-in {
-    opacity: 1;
-    transition: opacity 150ms ease-out;
-}
+  .timestamp {
+    font-size: 0.75rem;  
+    opacity: 0.6;      /* smaller text */
+    margin-top: 2px;
+    margin-left: 4px;
+    user-select: none;         /* don't let users highlight it */
+  }
+  
+
 .LoadingMessage {
     text-align: center;
     font-style: italic;
@@ -342,7 +365,11 @@
     display: flex;
     padding: 16px 16px 16px 5px ;
     gap: 10px;
+    border-radius: 16px;
     background-color: var(--dark-gray);
+    margin: 10px;
+    border-top: 1px solid var(--light-gray);
+
   }
   
   #ClientMessage {
