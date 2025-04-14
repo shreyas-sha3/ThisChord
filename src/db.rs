@@ -21,7 +21,6 @@ pub async fn get_or_create_conversation(
         (user2, user1)
     };
 
-    // Use query_scalar! because we're only selecting one value (UUID)
     let existing = sqlx::query_scalar!(
         r#"SELECT id FROM conversations WHERE user1 = $1 AND user2 = $2"#,
         u1,
@@ -66,31 +65,94 @@ pub async fn store_direct_message(
     .await?;
     Ok(())
 }
+// Load recent direct messages returned in reverse if called for the first time... holy shit idk if this is how its supposed to be
+pub async fn load_server_messages(
+    pool: &PgPool,
+    limit: i64,
+    before: Option<DateTime<Utc>>,
+) -> Result<Vec<ChatMessage>, Error> {
+    let rows = if let Some(before_ts) = before {
+        // Fetch older messages in ascending order
+        sqlx::query_as!(
+            ChatMessage,
+            r#"
+            SELECT sender, content, sent_at
+            FROM server_messages
+            WHERE sent_at < $1
+            ORDER BY sent_at DESC
+            LIMIT $2
+            "#,
+            before_ts,
+            limit
+        )
+        .fetch_all(pool)
+        .await?
+    } else {
+        // Fetch latest messages in descending order
+        let rows = sqlx::query_as!(
+            ChatMessage,
+            r#"
+            SELECT sender, content, sent_at
+            FROM server_messages
+            ORDER BY sent_at DESC
+            LIMIT $1
+            "#,
+            limit
+        )
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter().rev().collect()
+    };
 
-// Load recent direct messages (latest N, returned in correct order)
+    Ok(rows)
+}
+
+
 pub async fn load_direct_messages(
     pool: &PgPool,
     conversation_id: Uuid,
     limit: i64,
+    before: Option<DateTime<Utc>>,
 ) -> Result<Vec<ChatMessage>, Error> {
-    let rows = sqlx::query_as!(
-        ChatMessage,
-        r#"
-        SELECT sender, content, sent_at
-        FROM messages
-        WHERE conversation_id = $1
-        ORDER BY sent_at DESC
-        LIMIT $2
-        "#,
-        conversation_id,
-        limit
-    )
-    .fetch_all(pool)
-    .await?;
+    let rows = if let Some(before_ts) = before {
+        // Fetch older messages in ascending order
+        sqlx::query_as!(
+            ChatMessage,
+            r#"
+            SELECT sender, content, sent_at
+            FROM messages
+            WHERE conversation_id = $1 AND sent_at < $2
+            ORDER BY sent_at DESC
+            LIMIT $3
+            "#,
+            conversation_id,
+            before_ts,
+            limit
+        )
+        .fetch_all(pool)
+        .await?
+    } else {
+        // Fetch latest messages in descending order
+        let rows = sqlx::query_as!(
+            ChatMessage,
+            r#"
+            SELECT sender, content, sent_at
+            FROM messages
+            WHERE conversation_id = $1
+            ORDER BY sent_at DESC
+            LIMIT $2
+            "#,
+            conversation_id,
+            limit
+        )
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter().rev().collect()
+    };
 
-    // Reverse so newest messages appear last
-    Ok(rows.into_iter().rev().collect())
+    Ok(rows)
 }
+
 
 pub async fn fetch_dm_list(
     pool: &PgPool,
@@ -113,6 +175,6 @@ pub async fn fetch_dm_list(
 
     Ok(rows
         .into_iter()
-        .filter_map(|row| row.dm_partner) // extract Option<String>
+        .filter_map(|row| row.dm_partner)
         .collect())
 }

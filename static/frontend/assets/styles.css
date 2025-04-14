@@ -60,7 +60,6 @@
     display: flex;
     flex-grow: 1;
     overflow: hidden;
-    border-right: 1px solid var(--light-gray);
 
   }
   
@@ -169,7 +168,6 @@
     justify-content: space-between;
     padding: 16px;
     font-size: 14px;
-  border-bottom: 1px solid var(--light-gray);
 
   }
   
@@ -177,6 +175,7 @@
 #user-bar {
   border-radius: 16px;
   background-color: var(--dark-gray);
+  border: 1px solid var(--light-gray);
 
 }
 

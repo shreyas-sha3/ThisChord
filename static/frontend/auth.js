@@ -23,14 +23,14 @@ form.addEventListener("submit", async (e) => {
   const text = await response.text();
 
   if (mode === "login" && text.includes("Login successful")) {
-    notificationSound = new Audio("./startup.mp3");
+    notificationSound = new Audio("./assets/notify.mp3");
     notificationSound.play().then(() => {
       console.log("Sound enabled");
     }).catch((err) => {
       console.warn("Sound blocked:", err);
     });
 
-    window.location.href = "/index.html";
+    window.location.href = "../index.html";
   } else {
     msg.textContent = text;
   }
