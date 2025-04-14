@@ -314,16 +314,23 @@ function displayMessage(text) {
     if (!timestamp) timestamp = new Date().toISOString();
     
     //Where to render Message
-    if(loadHistory){
+    if (loadHistory) {
         const firstMessage = messagesDiv.firstElementChild;
-        let TopMsgButton = firstMessage.querySelector("button");
-        let topMsgUser = TopMsgButton.textContent
-        if (user === topMsgUser) {
-            TopMsgButton.remove();
-            lastUser = ""
+        if (firstMessage) {
+            let TopMsgButton = firstMessage.querySelector("button");
+            let topMsgUser = TopMsgButton ? TopMsgButton.textContent : null;
+    
+            if (user === topMsgUser) {
+                if (TopMsgButton) TopMsgButton.remove();
+                lastUser = "";
+            }
         }
+        const scrollOffsetFromBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop;
         const element = createMesssageElement(user, message, timestamp);
         messagesDiv.prepend(element)
+        requestAnimationFrame(() => {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight - scrollOffsetFromBottom;
+        });
         Oldesttimestamp = timestamp;
     }
     else{
@@ -338,7 +345,7 @@ function displayMessage(text) {
 let Oldesttimestamp;
 const chatBox = document.getElementById("ChatBox");
 chatBox.addEventListener("scroll", () => {
-    if (chatBox.scrollTop === 0) {
+    if (chatBox.scrollTop === 0 ) {
         const oldestElement = chatBox.firstElementChild;
         if (!oldestElement) return;
         Oldesttimestamp = oldestElement.dataset.timestamp;
