@@ -417,6 +417,13 @@
   }
   
   /* === Login Page === */
+  #LoginWrapper {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
   #LoginBox {
     background-color: var(--dark-gray);
     padding: 30px;
@@ -493,21 +500,21 @@
   
     #sidebar-container {
       position: fixed;
-      top: 5%;
+      top: 40px; /* height of your header / ChatTitle */
+      height: 86%;
       left: -60%;
-      bottom: 8%;
-      height: 87%;
-      width: 60%;
+      width: 55%;
       z-index: 1000;
       transition: left 0.15s ease;
     }
+    
   
     #sidebar-container.active {
       left: 0;
     }  
 
   #server-bar {
-    width: 50%;
+    width: 30%;
     overflow-x: auto;
     border-right: none;
   }
