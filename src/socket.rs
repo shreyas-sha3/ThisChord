@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, VecDeque}, sync::Arc};
+use std::{collections::{HashMap}, sync::Arc};
 use futures_util::{StreamExt, SinkExt};
 use tokio::sync::{RwLock, Mutex, broadcast};
 use warp::ws::{Message as WsMessage, WebSocket};
@@ -14,7 +14,6 @@ pub async fn handle_socket(
     ws: WebSocket,
     tx: broadcast::Sender<(String, String)>,
     users: TxMap,
-    message_history: Arc<Mutex<VecDeque<(String, String, String, Option<String>)>>>,
     db: Arc<sqlx::PgPool>,
     username: String,
 ) {
@@ -74,7 +73,11 @@ pub async fn handle_socket(
                 continue;
             }
             if trimmed == "ping" {
-                sender.lock().await.send(WsMessage::text("pong")).await.ok();
+                let payload = json!({
+                    "type": "pingcheck",
+                    "manual": false
+                }).to_string();
+                sender.lock().await.send(WsMessage::text(payload)).await.ok();
                 continue;
             }
             match serde_json::from_str::<ClientMessage>(trimmed) {
@@ -232,7 +235,14 @@ pub async fn handle_socket(
                             let user_msg = json!(["SERVER", format!("Online users: {}", user_list), "server", null]).to_string();
                             sender.lock().await.send(WsMessage::text(user_msg)).await.ok();
                         }
-
+                        "/ping" => {
+                            let payload = json!({
+                                "type": "pingcheck",
+                                "manual": true
+                            })
+                            .to_string();
+                            sender.lock().await.send(WsMessage::text(payload)).await.ok();
+                        }
                         ":q" => {
                             let exit_msg = json!(["SERVER", "You have disconnected successfully.", "server", null]).to_string();
                             sender.lock().await.send(WsMessage::text(exit_msg)).await.ok();

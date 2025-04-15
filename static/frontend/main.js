@@ -53,6 +53,7 @@ function ToggleStatus(status){
 
 let pingInterval;
 let lastPingTime;
+let latency
 function ConnectSocket() {
     ToggleStatus(0);
     socket = new WebSocket(`${ws_url}/chat`);
@@ -75,13 +76,19 @@ function ConnectSocket() {
     };
 
     socket.onmessage = (event) => {
-        if (event.data === "pong") {
-            const latency = Date.now() - lastPingTime;
-            console.log(`Latency: ${latency} ms`);
+        const parsed = JSON.parse(event.data);
+
+        //not working
+        if (parsed.type === "pingcheck") {
+            latency = Date.now() - lastPingTime;
+            console.log(latency)
+            if(parsed.manual === true){
+                displayMessage("hm");
+            }
             return;
         }
         
-        const parsed = JSON.parse(event.data);
+        
     
         if (parsed.type === "dm_list") {
             for (const username of parsed.users) {
@@ -309,7 +316,7 @@ function displayMessage(text) {
     } catch {
         return;
     }
-    console.log(data)
+    console.log("Parsed data:", data, "Type:", typeof data);
     let [user, message, type, to, timestamp, loadHistory] = data;
     const isDM = type === "dm";
 
@@ -421,7 +428,7 @@ async function insertRandomEmoji() {
     const emoji = (await res.json())[Math.floor(Math.random() * 6500)].char;
     const input = document.getElementById("ClientMessage");
     input.setRangeText(emoji, input.selectionStart, input.selectionEnd, "end");
-    input.focus();
+    //input.focus();
     //document.getElementById("emoji-button").textContent = emoji;
   }
 

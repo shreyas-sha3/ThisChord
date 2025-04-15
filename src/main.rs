@@ -1,12 +1,12 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap};
 use std::env;
 use std::sync::Arc;
 
-use futures_util::{SinkExt, StreamExt}; // Required for WebSocket streams
+//use futures_util::{SinkExt, StreamExt};
 
-use tokio::sync::{broadcast, Mutex, RwLock};
+use tokio::sync::{broadcast, RwLock};
 
-use warp::ws::Message as WsMessage;
+//use warp::ws::Message as WsMessage;
 use warp::{Filter, Reply, http::header::{SET_COOKIE, HeaderValue}};
 
 //use serde::{Serialize, Deserialize};
@@ -20,7 +20,7 @@ use regex::Regex;
 use uuid::Uuid;
 
 mod db;
-use db::store_direct_message;
+//use db::store_direct_message;
 mod socket; 
 use crate::socket::handle_socket;
 mod message;
@@ -30,15 +30,20 @@ mod message;
 #[tokio::main]
 async fn main() {
     let cors = warp::cors()
-        .allow_any_origin()
-        .allow_credentials(true)
-        .allow_headers(vec!["Content-Type"]);
+    .allow_origins(vec![
+        "http://127.0.0.1:5501",
+        "http://localhost:5501",               
+        "https://thischord.pages.dev",         
+    ])
+    .allow_methods(vec!["GET", "POST"])
+    .allow_headers(vec!["content-type"])
+    .allow_credentials(true); 
 
-        dotenv().ok();
+    dotenv().ok();
 
     let (tx, _rx) = broadcast::channel::<(String, String)>(10);
     let users = Arc::new(RwLock::new(HashMap::new()));
-    let message_history = Arc::new(Mutex::new(VecDeque::new()));
+    //let message_history = Arc::new(Mutex::new(VecDeque::new()));
     let username_regex = Arc::new(Regex::new(r"^[a-zA-Z0-9_.-]{4,}$").unwrap());
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL not set");
     let pool = PgPool::connect(&db_url).await.expect("Failed to connect to DB");
@@ -168,7 +173,7 @@ async fn main() {
     let chat = {
         let tx = tx.clone();
         let users = users.clone();
-        let history = message_history.clone();
+        //let history = message_history.clone();
         let db = db.clone();
 
         warp::path("chat")
@@ -178,7 +183,6 @@ async fn main() {
                 let db = db.clone();
                 let tx = tx.clone();
                 let users = users.clone();
-                let history = history.clone();
 
                 async move {
                     if let Some(token) = session {
@@ -191,7 +195,7 @@ async fn main() {
                         {
                             Ok(username) => {
                                 let reply = ws.on_upgrade(move |socket| {
-                                    handle_socket(socket, tx, users, history, db, username)
+                                    handle_socket(socket, tx, users, db, username)
                                 });
                                 Ok::<_, warp::Rejection>(reply.into_response())
                             }

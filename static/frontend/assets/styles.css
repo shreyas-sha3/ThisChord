@@ -500,10 +500,11 @@
   
     #sidebar-container {
       position: fixed;
-      top: 40px; /* height of your header / ChatTitle */
-      height: 86%;
+      top: 37px;
+      bottom: 60px;
       left: -60%;
-      width: 55%;
+      width: 50%;
+      height: auto;
       z-index: 1000;
       transition: left 0.15s ease;
     }
@@ -514,15 +515,15 @@
     }  
 
   #server-bar {
-    width: 30%;
+    width: 40%;
     overflow-x: auto;
     border-right: none;
   }
 
   .server-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
   }
 
   .dm-btn {
@@ -550,10 +551,10 @@
   }
 
   #MessageBox {
-    flex-direction: row;
     padding: 10px;
     gap: 8px;
     margin: 5px;
+    z-index: 999;
   }
 
   #ClientMessage {
