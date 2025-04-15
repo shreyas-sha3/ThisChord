@@ -4,7 +4,7 @@
 let http_url="https://rust-chat-um86.onrender.com"
 let ws_url="wss://rust-chat-um86.onrender.com"
 
-let socket
+let socket,username
 const notificationSound = new Audio("./assets/notify.mp3");
 
 // main.js
