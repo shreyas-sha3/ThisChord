@@ -5,7 +5,6 @@ let http_url="https://rust-chat-um86.onrender.com"
 let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
-const statusElement = document.getElementById("username");
 const notificationSound = new Audio("./assets/notify.mp3");
 
 // main.js
@@ -30,15 +29,15 @@ fetch(`${http_url}/auth-check`, {
 //CHAT
 function ToggleStatus(status){
     if(status==1){
-    statusElement.textContent = username;
+    usernameElement.textContent = username;
     //statusElement.style.color="#b8bb26";
     }
     else if(status==0){
-        statusElement.textContent = "Connecting...";
+        usernameElement.textContent = "Connecting...";
         //statusElement.style.color="#83a598";
     }
     else if(status==-1){
-        statusElement.textContent = "Disconnected...";
+        usernameElement.textContent = "Disconnected...";
         //statusElement.style.color="#fb4934";
     }
 }
