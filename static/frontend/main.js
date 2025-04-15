@@ -4,17 +4,21 @@
 let http_url="https://rust-chat-um86.onrender.com"
 let ws_url="wss://rust-chat-um86.onrender.com"
 
-let socket,username
+let socket
+let username; 
+const statusElement = document.getElementById("username");
 const notificationSound = new Audio("./assets/notify.mp3");
 
-// main.js
-fetch(`${http_url}/auth-check`, {
-  credentials: "include",
-})
-  .then(res => res.json())
-  .then(data => {
+
+async function init() {
+  try {
+    const res = await fetch(`${http_url}/auth-check`, {
+      credentials: "include",
+    });
+    const data = await res.json();
+
     if (data.status === "ok") {
-      username = data.username; 
+      username = data.username;
       ConnectSocket();
 
       const usernameElement = document.getElementById("username");
@@ -22,22 +26,27 @@ fetch(`${http_url}/auth-check`, {
     } else {
       window.location.href = "./auth.html";
     }
-  });
+  } catch (err) {
+    console.error("Auth check failed:", err);
+    window.location.href = "./auth.html";
+  }
+}
 
+init();
 
 
 //CHAT
 function ToggleStatus(status){
     if(status==1){
-    usernameElement.textContent = username;
+    statusElement.textContent = username;
     //statusElement.style.color="#b8bb26";
     }
     else if(status==0){
-        usernameElement.textContent = "Connecting...";
+        statusElement.textContent = "Connecting...";
         //statusElement.style.color="#83a598";
     }
     else if(status==-1){
-        usernameElement.textContent = "Disconnected...";
+        statusElement.textContent = "Disconnected...";
         //statusElement.style.color="#fb4934";
     }
 }
