@@ -252,7 +252,6 @@
     flex-direction: column;
     gap: 3px;
     width: 100%;
-    scroll-behavior: smooth;
 
     opacity: 1;
     transition: opacity 0.3s ease;
@@ -263,7 +262,20 @@
     transition: opacity 0.25s ease-in-out;
   }
 
-
+  .fade-in {
+    opacity: 0;
+    transition: opacity 0.4s ease-in;
+  }
+  
+  .fade-in.show {
+    opacity: 1;
+  }
+  
+  .ChatBoxClone {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
 
 /* Default message styles */
 #ChatBox p {
@@ -336,6 +348,14 @@
     border-radius: 4px;
   }
   
+  .locked-div {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    z-index: 1000;
+}
+
   .timestamp {
     font-size: 0.75rem;  
     opacity: 0.6;      /* smaller text */

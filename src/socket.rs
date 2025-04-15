@@ -41,14 +41,7 @@ pub async fn handle_socket(
         sender.lock().await.send(WsMessage::text(msg)).await.ok();
     }
     
-    // {
-    //     let history = message_history.lock().await;
-    //     for (sender_name, msg, msg_type, target) in history.iter() {
-    //         let json_msg = json!([sender_name, msg, msg_type, target]).to_string();
-    //         sender.lock().await.send(WsMessage::text(json_msg)).await.ok();
-    //     }
-        
-    // }
+
 
     users.write().await.insert(username.clone(), sender.clone());
 
@@ -112,61 +105,121 @@ pub async fn handle_socket(
                     }
                     sender.lock().await.send(WsMessage::text(dm_text)).await.ok();
                 }
-                Ok(ClientMessage::LoadDmHistory { with ,timestamp}) => {
+                Ok(ClientMessage::LoadDmHistory { with, timestamp }) => {
                     println!("TIME {:?} ", timestamp);
                     match get_or_create_conversation(&db, &username, &with).await {
                         Ok(conversation_id) => {
                             match load_direct_messages(&db, conversation_id, 30, timestamp).await {
-
+                                // LOADING 30 PREV DMS 
                                 Ok(messages) => {
-                                        println!("Loading server messages before {:?} - found {} messages", timestamp, messages.len());
-
-                                    let sender_dm = sender_for_dm.clone(); 
+                                    // println!(
+                                    //     "Loading server messages before {:?} - found {} messages",
+                                    //     timestamp,
+                                    //     messages.len()
+                                    // );
+                                    let sender_dm = sender_for_dm.clone();
                                     let is_history = timestamp.is_some();
-                                    for ChatMessage { sender, content, sent_at, .. } in messages {
-                                        let dm_msg = json!([sender, content, "dm", with, sent_at.to_rfc3339(),is_history]).to_string();
-                                        sender_dm.lock().await.send(WsMessage::text(dm_msg)).await.ok();
+                                    if is_history {
+                                        let messages_array: Vec<_> = messages
+                                            .into_iter()
+                                            .map(|ChatMessage { sender, content, sent_at, .. }| {
+                                                json!([sender, content, "dm", with, sent_at.to_rfc3339()])
+                                            })
+                                            .collect();
+                                        
+                                        // ARRAY OF MESSAGES 
+                                        let payload = json!({
+                                            "type": "load_prev_msgs",
+                                            "msgs": messages_array
+                                        }).to_string();
+                                        sender_dm.lock().await.send(WsMessage::text(payload)).await.ok();
+                                    } else {
+                                        for ChatMessage { sender, content, sent_at, .. } in messages {
+                                            let payload = json!([sender, content, "dm", with, sent_at.to_rfc3339()])
+                                                .to_string();
+                                            sender_dm.lock().await.send(WsMessage::text(payload)).await.ok();
+                                        }
                                     }
-                                    
                                 }
                                 Err(e) => {
-                                    let err_msg = json!(["SERVER", format!("Failed to load chat history: {}", e), "server", null]).to_string();
-                                    let sender_clone = sender.clone();
-                                    let sender_err = sender_clone.clone(); 
+                                    let err_msg = json!([
+                                        "SERVER",
+                                        format!("Failed to load chat history: {}", e),
+                                        "server",
+                                        null
+                                    ])
+                                    .to_string();
+                                    let sender_err = sender.clone();
                                     sender_err.lock().await.send(WsMessage::text(err_msg)).await.ok();
                                 }
                             }
                         }
                         Err(e) => {
-                            let err_msg = json!(["SERVER", format!("Failed to get conversation: {}", e), "server", null]).to_string();
-                            let sender_clone = sender.clone();
-                            let sender_err = sender_clone.clone(); 
+                            let err_msg = json!([
+                                "SERVER",
+                                format!("Failed to get conversation: {}", e),
+                                "server",
+                                null
+                            ])
+                            .to_string();
+                            let sender_err = sender.clone();
                             sender_err.lock().await.send(WsMessage::text(err_msg)).await.ok();
                         }
                     }
                 }
                 
-                Ok(ClientMessage::LoadServerHistory {timestamp}) => {
-                            match load_server_messages(&db, 30, timestamp).await {
-
-                                Ok(messages) => {
-                                        println!("Loading server messages before {:?} - found {} messages", timestamp, messages.len());
-                                    let sender_dm = sender.clone(); 
-                                    let is_history = timestamp.is_some();
-                                    for ChatMessage { sender, content, sent_at, .. } in messages {
-                                        let server_msg = json!([sender, content, "server","all",sent_at.to_rfc3339(),is_history]).to_string();
-                                        sender_dm.lock().await.send(WsMessage::text(server_msg)).await.ok();
-                                    }
-                                    
-                                }
-                                Err(e) => {
-                                    let err_msg = json!(["SERVER", format!("Failed to load chat history: {}", e), "server", null]).to_string();
-                                    let sender_clone = sender.clone();
-                                    let sender_err = sender_clone.clone(); 
-                                    sender_err.lock().await.send(WsMessage::text(err_msg)).await.ok();
+                
+                Ok(ClientMessage::LoadServerHistory { timestamp }) => {
+                    match load_server_messages(&db, 30, timestamp).await {
+                        Ok(messages) => {
+                            // println!(
+                            //     "Loading server messages before {:?} - found {} messages",
+                            //     timestamp,
+                            //     messages.len()
+                            // );
+                
+                            let sender_clone = sender.clone();
+                            let is_history = timestamp.is_some();
+                
+                            if is_history {
+                                // Pack all into one "load_prev_msgs"
+                                let messages_array: Vec<_> = messages
+                                    .into_iter()
+                                    .map(|ChatMessage { sender, content, sent_at, .. }| {
+                                        json!([sender, content, "server", "all", sent_at.to_rfc3339()])
+                                    })
+                                    .collect();
+                
+                                let payload = json!({
+                                    "type": "load_prev_msgs",
+                                    "msgs": messages_array
+                                })
+                                .to_string();
+                
+                                sender_clone.lock().await.send(WsMessage::text(payload)).await.ok();
+                            } else {
+                                // Send one-by-one
+                                for ChatMessage { sender, content, sent_at, .. } in messages {
+                                    let server_msg = json!([sender, content, "server", "all", sent_at.to_rfc3339()])
+                                        .to_string();
+                                    sender_clone.lock().await.send(WsMessage::text(server_msg)).await.ok();
                                 }
                             }
                         }
+                        Err(e) => {
+                            let err_msg = json!([
+                                "SERVER",
+                                format!("Failed to load chat history: {}", e),
+                                "server",
+                                null
+                            ])
+                            .to_string();
+                
+                            let sender_err = sender.clone();
+                            sender_err.lock().await.send(WsMessage::text(err_msg)).await.ok();
+                        }
+                    }
+                }
 
                 Ok(ClientMessage::ServerMessage { msg }) => {
                     match msg.as_str() {
@@ -204,13 +257,7 @@ pub async fn handle_socket(
                                 .ok(); // optionally log on error
                             });
                             tx.send((json_msg, username.clone())).ok();
-                            // {
-                            //     let mut history = history_clone.lock().await;
-                            //     if history.len() >= 30 {
-                            //         history.pop_front();
-                            //     }
-                            //     history.push_back((username.clone(), msg.clone(), "server".to_string(), None));
-                            // }
+
                         }
                     }
                 }

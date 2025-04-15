@@ -1,8 +1,8 @@
 
-//let http_url="http://localhost:8080"
-//let ws_url="ws://localhost:8080"
-let http_url="https://rust-chat-um86.onrender.com"
-let ws_url="wss://rust-chat-um86.onrender.com"
+let http_url="http://localhost:8080"
+let ws_url="ws://localhost:8080"
+//let http_url="https://rust-chat-um86.onrender.com"
+//let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
 const statusElement = document.getElementById("username");
@@ -81,7 +81,14 @@ function ConnectSocket() {
             }
             return;
         }
-        
+
+        //send msg history here
+        if (parsed.type === "load_prev_msgs") {
+                TakeALoadOfThis(parsed.msgs); 
+                return
+            }
+            
+            //individual messages
             displayMessage(event.data);
 
             if (document.hidden) {
@@ -158,13 +165,13 @@ function switchToDM(username) {
 
         // Start fade out
         messagesDiv.classList.add("fade-transition");
-
+        chatBox.innerHTML = '';
+        showLoadingSkeleton();
+        
         setTimeout(() => {
             if (username) {
-                showLoadingSkeleton();
                 socket.send(JSON.stringify({ type: "load_dm", with: username }));
             } else {
-                showLoadingSkeleton();
                 socket.send(JSON.stringify({ type: "load_server"}));
             }
 
@@ -212,16 +219,16 @@ document.querySelector('.server-btn:first-child').addEventListener('click', () =
 //LOADING WHILE SWITCHING DMS
 function showLoadingSkeleton() {
     const chatBox = document.getElementById('ChatBox');
-    chatBox.innerHTML = '';
+    //chatBox.innerHTML = '';
     const loadingMsg = document.createElement("p");
     loadingMsg.textContent = "Loading messages";
     loadingMsg.classList.add("LoadingMessage"); 
-    chatBox.appendChild(loadingMsg);
+    chatBox.prepend(loadingMsg);
     let dotCount = 0;
     const interval = setInterval(() => {
         dotCount = (dotCount + 1) % 4;
         loadingMsg.textContent = "Loading messages" + ".".repeat(dotCount);
-    }, 500);
+    }, 150);
     //remove in 3 secs
     setTimeout(() => {
         clearInterval(interval);
@@ -247,6 +254,7 @@ document.addEventListener("keydown", function (event) {
 //CREATING FORMATTED MESSAGES
 function createMesssageElement(sender, message , timestamp) {
     const messageContainer = document.createElement("div");
+    messageContainer.classList.add("fade-in");
     messageContainer.dataset.timestamp = timestamp; 
     if (sender !== lastUser) {
         const messageUser = document.createElement("button");
@@ -312,46 +320,74 @@ function displayMessage(text) {
     const messagesDiv = document.getElementById("ChatBox");
 
     if (!timestamp) timestamp = new Date().toISOString();
-    
-    //Where to render Message
-    if (loadHistory) {
-        const firstMessage = messagesDiv.firstElementChild;
-        if (firstMessage) {
-            let TopMsgButton = firstMessage.querySelector("button");
-            let topMsgUser = TopMsgButton ? TopMsgButton.textContent : null;
-    
-            if (user === topMsgUser) {
-                if (TopMsgButton) TopMsgButton.remove();
-                lastUser = "";
-            }
-        }
-        const scrollOffsetFromBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop;
-        const element = createMesssageElement(user, message, timestamp);
-        messagesDiv.prepend(element)
-        requestAnimationFrame(() => {
-            messagesDiv.scrollTop = messagesDiv.scrollHeight - scrollOffsetFromBottom;
-        });
-        Oldesttimestamp = timestamp;
-    }
-    else{
+
         const element = createMesssageElement(user, message, timestamp);
         messagesDiv.appendChild(element);
+        requestAnimationFrame(() => {
+            element.classList.add("show"); 
+        });
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    //}
     
 }
+
+function TakeALoadOfThis(msgs) {
+    const messagesDiv = document.getElementById("ChatBox");
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("ChatBoxClone"); // use the same styles as ChatBox
+    const elements=[];
+
+    let timestamp;
+    for (const msg of msgs) {
+        const [user, message, type, withUser, msgTimestamp] = msg;
+        const element = createMesssageElement(user, message, msgTimestamp);
+        wrapper.appendChild(element);
+        elements.push(element); // collect them for animation
+        timestamp = msgTimestamp;
+    }
+
+    //store scroll position and disable scroll 
+    const topVisible = messagesDiv.firstElementChild;
+    const topOffset = topVisible?.getBoundingClientRect().top;
+    messagesDiv.style.overflow = "hidden";
+
+    messagesDiv.prepend(wrapper); 
+
+    //restore scroll position and enable scroll again
+    requestAnimationFrame(() => {
+        if (topVisible) {
+            const newOffset = topVisible.getBoundingClientRect().top;
+            messagesDiv.scrollTop += newOffset - topOffset;
+            for (const el of elements) {
+                el.classList.add("show"); // fade them in
+            }
+
+        }
+    });
+
+    messagesDiv.style.overflow = "auto";
+    if (timestamp) {
+        Oldesttimestamp = timestamp;
+    }
+}
+
 
 
 let Oldesttimestamp;
 const chatBox = document.getElementById("ChatBox");
 chatBox.addEventListener("scroll", () => {
     if (chatBox.scrollTop === 0 ) {
-        const oldestElement = chatBox.firstElementChild;
+        let oldestElement = chatBox.firstElementChild;
+       
+        while (oldestElement && !oldestElement.dataset.timestamp) {
+            oldestElement = oldestElement.firstElementChild;
+        }
         if (!oldestElement) return;
         Oldesttimestamp = oldestElement.dataset.timestamp;
         if (!Oldesttimestamp) return;
 
         if (msg_type === "dm") {
+            showLoadingSkeleton()
             socket.send(JSON.stringify({
                 type: "load_dm",
                 with: dm_recipient,
@@ -359,6 +395,8 @@ chatBox.addEventListener("scroll", () => {
             }));
         } 
         else if (msg_type === "server") {
+            showLoadingSkeleton()
+
             socket.send(JSON.stringify({
                 type: "load_server",
                 timestamp: Oldesttimestamp

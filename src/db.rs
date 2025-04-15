@@ -65,14 +65,14 @@ pub async fn store_direct_message(
     .await?;
     Ok(())
 }
-// Load recent direct messages returned in reverse if called for the first time... holy shit idk if this is how its supposed to be
+// Load recent server messages (public chat)
 pub async fn load_server_messages(
     pool: &PgPool,
     limit: i64,
     before: Option<DateTime<Utc>>,
 ) -> Result<Vec<ChatMessage>, Error> {
     let rows = if let Some(before_ts) = before {
-        // Fetch older messages in ascending order
+        // Fetch older messages before `before_ts`, newest first
         sqlx::query_as!(
             ChatMessage,
             r#"
@@ -88,8 +88,8 @@ pub async fn load_server_messages(
         .fetch_all(pool)
         .await?
     } else {
-        // Fetch latest messages in descending order
-        let rows = sqlx::query_as!(
+        // Fetch most recent messages
+        sqlx::query_as!(
             ChatMessage,
             r#"
             SELECT sender, content, sent_at
@@ -100,14 +100,13 @@ pub async fn load_server_messages(
             limit
         )
         .fetch_all(pool)
-        .await?;
-        rows.into_iter().rev().collect()
+        .await?
     };
 
-    Ok(rows)
+    Ok(rows.into_iter().rev().collect())
 }
 
-
+// Load recent direct messages (DMs)
 pub async fn load_direct_messages(
     pool: &PgPool,
     conversation_id: Uuid,
@@ -115,7 +114,7 @@ pub async fn load_direct_messages(
     before: Option<DateTime<Utc>>,
 ) -> Result<Vec<ChatMessage>, Error> {
     let rows = if let Some(before_ts) = before {
-        // Fetch older messages in ascending order
+        // Fetch older DMs before `before_ts`
         sqlx::query_as!(
             ChatMessage,
             r#"
@@ -132,8 +131,8 @@ pub async fn load_direct_messages(
         .fetch_all(pool)
         .await?
     } else {
-        // Fetch latest messages in descending order
-        let rows = sqlx::query_as!(
+        // Fetch most recent DMs
+        sqlx::query_as!(
             ChatMessage,
             r#"
             SELECT sender, content, sent_at
@@ -146,12 +145,12 @@ pub async fn load_direct_messages(
             limit
         )
         .fetch_all(pool)
-        .await?;
-        rows.into_iter().rev().collect()
+        .await?
     };
 
-    Ok(rows)
+    Ok(rows.into_iter().rev().collect())
 }
+
 
 
 pub async fn fetch_dm_list(
