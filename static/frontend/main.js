@@ -8,7 +8,8 @@ let socket
 let username; 
 const statusElement = document.getElementById("username");
 const notificationSound = new Audio("./assets/notify.mp3");
-
+setVh(); // Initial run
+init();
 
 async function init() {
   try {
@@ -32,7 +33,6 @@ async function init() {
   }
 }
 
-init();
 
 
 //CHAT
@@ -435,6 +435,15 @@ if (logoutButton) {
 
 
   //PHONE
+
+  function setVh() {
+    let vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  
+  window.addEventListener('resize', setVh);
+  window.addEventListener('orientationchange', setVh);
+  
   const sidebar = document.getElementById('sidebar-container');
   const mainContent = document.getElementById('main-content');
   let touchStartX = 0;

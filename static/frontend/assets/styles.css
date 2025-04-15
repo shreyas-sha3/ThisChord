@@ -470,6 +470,20 @@
   }
 
   @media (max-width: 768px) {
+    html, body {
+      overscroll-behavior-y: contain;
+      touch-action: manipulation;
+    }
+    #app-container {
+      height: calc(var(--vh) * 100);
+    }
+    
+    #sidebar-container,
+    #main-content,
+    body {
+      height: calc(var(--vh) * 100);
+    }
+    
     #app-container {
       flex-direction: column;
       height: 100vh;
@@ -479,12 +493,13 @@
   
     #sidebar-container {
       position: fixed;
-      top: 0;
+      top: 5%;
       left: -60%;
-      bottom: 0;
+      bottom: 8%;
+      height: 87%;
       width: 60%;
       z-index: 1000;
-      transition: left 0.3s ease;
+      transition: left 0.15s ease;
     }
   
     #sidebar-container.active {
