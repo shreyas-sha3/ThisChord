@@ -421,7 +421,7 @@
     background-color: var(--dark-gray);
     padding: 30px;
     border-radius: 8px;
-    width: 100%;
+    width: 90vw;
     max-width: 400px;
     text-align: center;
   }
@@ -468,4 +468,80 @@
     margin-top: 10px;
     color: var(--red);
   }
+
+  @media (max-width: 768px) {
+    #app-container {
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
   
+    #sidebar-container {
+      position: fixed;
+      top: 0;
+      left: -60%;
+      bottom: 0;
+      width: 60%;
+      z-index: 1000;
+      transition: left 0.3s ease;
+    }
+  
+    #sidebar-container.active {
+      left: 0;
+    }  
+
+  #server-bar {
+    width: 50%;
+    overflow-x: auto;
+    border-right: none;
+  }
+
+  .server-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .dm-btn {
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  #user-bar {
+    height: auto;
+    padding: 12px;
+    font-size: 12px;
+    justify-content: space-between;
+  }
+
+  #main-content {
+    flex-grow: 1;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  #ChatTitle {
+    font-size: 16px;
+    padding: 8px;
+    margin: 5px;
+  }
+
+  #MessageBox {
+    flex-direction: row;
+    padding: 10px;
+    gap: 8px;
+    margin: 5px;
+  }
+
+  #ClientMessage {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  #sendBtn {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+}

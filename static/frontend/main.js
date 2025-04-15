@@ -414,7 +414,7 @@ async function insertRandomEmoji() {
     const input = document.getElementById("ClientMessage");
     input.setRangeText(emoji, input.selectionStart, input.selectionEnd, "end");
     input.focus();
-    document.getElementById("emoji-button").textContent = emoji;
+    //document.getElementById("emoji-button").textContent = emoji;
   }
 
 
@@ -424,3 +424,36 @@ if (logoutButton) {
     document.cookie = "session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     window.location.href = "/auth.html"; // Redirect to login page
   })}
+
+
+  //PHONE
+  const sidebar = document.getElementById('sidebar-container');
+  const mainContent = document.getElementById('main-content');
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  // Swipe detection
+  function handleTouchStart(e) {
+    touchStartX = e.changedTouches[0].screenX;
+  }
+
+  function handleTouchEnd(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    const deltaX = touchEndX - touchStartX;
+
+    if (deltaX > 50) {
+      // swipe right
+      sidebar.classList.add('active');
+    } else if (deltaX < -50) {
+      // swipe left
+      sidebar.classList.remove('active');
+    }
+  }
+
+  // Tap outside sidebar to close
+  document.addEventListener('click', (e) => {
+    sidebar.classList.remove('active');
+  });
+
+  document.addEventListener('touchstart', handleTouchStart, false);
+  document.addEventListener('touchend', handleTouchEnd, false);

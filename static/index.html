@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>ThisChord</title>
   <link rel="icon" type="image/x-icon" href="./frontend/assets/favicon.ico">
   <link rel="stylesheet" href="./frontend/assets/styles.css">
@@ -40,7 +40,7 @@
       <h2 id="ChatTitle">Public Chat</h2>
       <div id="ChatBox"></div>
       <form id="MessageBox" onsubmit="sendMessage(event)"><span></span>
-        <button id="emoji-button" type="button" onclick="insertRandomEmoji()">🎲</button>
+        <button id="emoji-button" type="button" onclick="insertRandomEmoji()">⚄</button>
         <input type="text" id="ClientMessage" autocomplete="off" autofocus />
         <button type="submit" id="sendBtn">Send</button>
       </form>
