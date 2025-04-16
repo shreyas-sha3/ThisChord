@@ -1,8 +1,8 @@
 
-let http_url="http://localhost:8080"
-let ws_url="ws://localhost:8080"
-//let http_url="https://rust-chat-um86.onrender.com"
-//let ws_url="wss://rust-chat-um86.onrender.com"
+//let http_url="http://localhost:8080"
+//let ws_url="ws://localhost:8080"
+let http_url="https://rust-chat-um86.onrender.com"
+let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
 let username; 
