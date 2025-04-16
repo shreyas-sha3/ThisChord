@@ -1,4 +1,4 @@
-let url = "https://rust-chat-um86.onrender.com";
+ let url = "https://rust-chat-um86.onrender.com/chat";
 //let url = "http://127.0.0.1:8080";
 
 
@@ -23,7 +23,7 @@ form.addEventListener("submit", async (e) => {
   const text = await response.text();
 
   if (mode === "login" && text.includes("Login successful")) {
-    const notificationSound = new Audio(`${location.origin}/assets/notify.mp3`);
+    const notificationSound = new Audio(`/frontend/assets/notify.mp3`);
     notificationSound.play().then(() => {
       console.log("Sound enabled");
     }).catch((err) => {

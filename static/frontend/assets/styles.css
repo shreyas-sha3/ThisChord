@@ -496,13 +496,16 @@
       top: 37px;
       bottom: 60px;
       left: -60%;
-      width: 50%;
+      width: 55%;
       height: auto;
       z-index: 1000;
       transition: left 0.15s ease;
     }
-    
-  
+    #sidebar-container h3{
+      font-size: 10px;
+      white-space: nowrap; 
+    }
+
     #sidebar-container.active {
       left: 0;
     }  

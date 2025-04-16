@@ -1,13 +1,13 @@
 
-//let http_url="http://127.0.0.1:8080"
-//let ws_url="ws://127.0.0.1:8080"
-let http_url="https://rust-chat-um86.onrender.com"
-let ws_url="wss://rust-chat-um86.onrender.com"
+let http_url = "https://rust-chat-um86.onrender.com/chat";
+//let http_url = "http://127.0.0.1:8080";
 
+
+const ws_url = http_url.replace(/^http/, "ws");
 let socket
 let username; 
 const statusElement = document.getElementById("username");
-const notificationSound = new Audio(`${location.origin}/assets/notify.mp3`);
+const notificationSound = new Audio(`/frontend/assets/notify.mp3`);
 setVh(); // Initial run
 init();
 
@@ -254,7 +254,7 @@ function showLoadingSkeleton() {
     setTimeout(() => {
         clearInterval(interval);
         loadingMsg.remove();
-    }, 1000);
+    }, 500);
 }
 
 
@@ -315,7 +315,7 @@ function displayMessage(text) {
     const isDM = type === "dm";
 
     if (isDM) {
-        if (dm_recipient !== user && dm_recipient !== to) {
+        if (dm_recipient !== user && dm_recipient !== to && user!==username) {
             console.log(`Skipping DM message not in current view: ${user} -> ${to}`);
             createDM(user);
             notificationSound.play().catch(console.warn);
