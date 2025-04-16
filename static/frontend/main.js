@@ -1,13 +1,13 @@
 
-//let http_url="http://localhost:8080"
-//let ws_url="ws://localhost:8080"
-let http_url="https://rust-chat-um86.onrender.com"
-let ws_url="wss://rust-chat-um86.onrender.com"
+let http_url="http://127.0.0.1:8080"
+let ws_url="ws://127.0.0.1:8080"
+//let http_url="https://rust-chat-um86.onrender.com"
+//let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
 let username; 
 const statusElement = document.getElementById("username");
-const notificationSound = new Audio("./assets/notify.mp3");
+const notificationSound = new Audio(`${location.origin}/assets/notify.mp3`);
 setVh(); // Initial run
 init();
 
@@ -257,19 +257,6 @@ function showLoadingSkeleton() {
     }, 1000);
 }
 
-//typing focuses on messagebar
-document.addEventListener("keydown", function (event) {
-    const input = document.getElementById("ClientMessage");
-
-    // Ignore if already focused
-    if (document.activeElement === input) return;
-    if (event.key.length === 1) {
-        input.focus();
-        input.value += event.key;  
-        event.preventDefault();    
-    }
-});
-
 
 
 //CREATING FORMATTED MESSAGES
@@ -429,6 +416,51 @@ chatBox.addEventListener("scroll", () => {
         }
     }
 })
+//typing focuses on messagebar
+document.addEventListener("keydown", function (event) {
+    const input = document.getElementById("ClientMessage");
+
+    // Ignore if already focused
+    if (document.activeElement === input) return;
+    if (event.key.length === 1) {
+        input.focus();
+        input.value += event.key;  
+        event.preventDefault();    
+    }
+});
+
+//PHONE STUFF
+const sidebar = document.getElementById('sidebar-container');
+const mainContent = document.getElementById('main-content');
+let touchStartX = 0;
+let touchEndX = 0;
+
+// Swipe detection
+function handleTouchStart(e) {
+  touchStartX = e.changedTouches[0].screenX;
+}
+
+function handleTouchEnd(e) {
+  touchEndX = e.changedTouches[0].screenX;
+  const deltaX = touchEndX - touchStartX;
+
+  if (deltaX > 50) {
+    // swipe right
+    sidebar.classList.add('active');
+  } else if (deltaX < -50) {
+    // swipe left
+    sidebar.classList.remove('active');
+  }
+}
+
+// Tap outside sidebar to close
+document.addEventListener('click', (e) => {
+  sidebar.classList.remove('active');
+});
+
+document.addEventListener('touchstart', handleTouchStart, false);
+document.addEventListener('touchend', handleTouchEnd, false);
+
 
 //EMOJIS
 window.insertRandomEmoji = insertRandomEmoji
@@ -449,44 +481,3 @@ if (logoutButton) {
     window.location.href = "/auth.html"; // Redirect to login page
   })}
 
-
-  //PHONE
-
-  function setVh() {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-  }
-  
-  window.addEventListener('resize', setVh);
-  window.addEventListener('orientationchange', setVh);
-  
-  const sidebar = document.getElementById('sidebar-container');
-  const mainContent = document.getElementById('main-content');
-  let touchStartX = 0;
-  let touchEndX = 0;
-
-  // Swipe detection
-  function handleTouchStart(e) {
-    touchStartX = e.changedTouches[0].screenX;
-  }
-
-  function handleTouchEnd(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    const deltaX = touchEndX - touchStartX;
-
-    if (deltaX > 50) {
-      // swipe right
-      sidebar.classList.add('active');
-    } else if (deltaX < -50) {
-      // swipe left
-      sidebar.classList.remove('active');
-    }
-  }
-
-  // Tap outside sidebar to close
-  document.addEventListener('click', (e) => {
-    sidebar.classList.remove('active');
-  });
-
-  document.addEventListener('touchstart', handleTouchStart, false);
-  document.addEventListener('touchend', handleTouchEnd, false);

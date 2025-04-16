@@ -1,3 +1,4 @@
+
 /* === Base Styles === */
 :root {
     --bg: #282828;
@@ -348,20 +349,12 @@
     border-radius: 4px;
   }
   
-  .locked-div {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    z-index: 1000;
-}
 
   .timestamp {
     font-size: 0.75rem;  
-    opacity: 0.6;      /* smaller text */
-    margin-top: 2px;
+    opacity: 0.6;      
     margin-left: 4px;
-    user-select: none;         /* don't let users highlight it */
+    user-select: none;        
   }
   
 
