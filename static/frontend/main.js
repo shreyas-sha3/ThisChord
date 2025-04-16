@@ -1,5 +1,5 @@
 
-let http_url = "https://rust-chat-um86.onrender.com/chat";
+let http_url = "https://rust-chat-um86.onrender.com";
 //let http_url = "http://127.0.0.1:8080";
 
 

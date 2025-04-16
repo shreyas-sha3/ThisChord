@@ -1,4 +1,4 @@
- let url = "https://rust-chat-um86.onrender.com/chat";
+ let url = "https://rust-chat-um86.onrender.com";
 //let url = "http://127.0.0.1:8080";
 
 
