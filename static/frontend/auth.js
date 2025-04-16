@@ -1,5 +1,5 @@
-let url = "https://rust-chat-um86.onrender.com";
-//let url = "http://localhost:8080";
+//let url = "https://rust-chat-um86.onrender.com";
+let url = "http://localhost:8080";
 
 const form = document.getElementById("auth-form");
 const msg = document.getElementById("log-message");

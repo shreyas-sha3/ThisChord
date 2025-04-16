@@ -62,9 +62,6 @@ pub async fn handle_socket(
             }
         }
     });
-    
-
-    //let history_clone = message_history.clone();
 
     while let Some(Ok(msg)) = receiver.next().await {
         if let Ok(text) = msg.to_str() {
@@ -115,11 +112,6 @@ pub async fn handle_socket(
                             match load_direct_messages(&db, conversation_id, 30, timestamp).await {
                                 // LOADING 30 PREV DMS 
                                 Ok(messages) => {
-                                    // println!(
-                                    //     "Loading server messages before {:?} - found {} messages",
-                                    //     timestamp,
-                                    //     messages.len()
-                                    // );
                                     let sender_dm = sender_for_dm.clone();
                                     let is_history = timestamp.is_some();
                                     if is_history {
@@ -175,12 +167,6 @@ pub async fn handle_socket(
                 Ok(ClientMessage::LoadServerHistory { timestamp }) => {
                     match load_server_messages(&db, 30, timestamp).await {
                         Ok(messages) => {
-                            // println!(
-                            //     "Loading server messages before {:?} - found {} messages",
-                            //     timestamp,
-                            //     messages.len()
-                            // );
-                
                             let sender_clone = sender.clone();
                             let is_history = timestamp.is_some();
                 

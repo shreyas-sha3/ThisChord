@@ -1,8 +1,8 @@
 
-//let http_url="http://localhost:8080"
-//let ws_url="ws://localhost:8080"
-let http_url="https://rust-chat-um86.onrender.com"
-let ws_url="wss://rust-chat-um86.onrender.com"
+let http_url="http://localhost:8080"
+let ws_url="ws://localhost:8080"
+//let http_url="https://rust-chat-um86.onrender.com"
+//let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
 let username; 
@@ -81,10 +81,11 @@ function ConnectSocket() {
         //not working
         if (parsed.type === "pingcheck") {
             latency = Date.now() - lastPingTime;
-            console.log(latency)
             if(parsed.manual === true){
-                displayMessage("hm");
+                displayMessage(JSON.stringify(["SERVER", `Your ping is ${latency}ms`, "server", null]));
+                return;
             }
+            console.log(latency)
             return;
         }
         
@@ -116,7 +117,7 @@ function ConnectSocket() {
     
 }
 
-let msg_type = "server";
+let current_view = "server";
 let dm_recipient = null;
 
 window.sendMessage =sendMessage
@@ -126,11 +127,15 @@ function sendMessage(event) {
     const msg = MessageBox.value.trim();
     if (msg) {
         const payload = {
-            type: msg_type,
+            type: current_view,
             msg: msg
         };
-        if (msg_type === "dm") {
+        if (current_view === "dm") {
             payload.to = dm_recipient;
+        }
+        if(msg==="/ping"){
+    lastPingTime = Date.now();
+
         }
         socket.send(JSON.stringify(payload));
         MessageBox.value = "";
@@ -175,7 +180,7 @@ function switchToDM(username) {
     const messagesDiv = document.getElementById("ChatBox");
 
     if (dm_recipient !== username) {
-        msg_type = username ? "dm" : "server";
+        current_view = username ? "dm" : "server";
         dm_recipient = username;
 
         // Start fade out
@@ -184,6 +189,7 @@ function switchToDM(username) {
         showLoadingSkeleton();
         
         setTimeout(() => {
+            LastMsgSender=""
             if (username) {
                 socket.send(JSON.stringify({ type: "load_dm", with: username }));
             } else {
@@ -271,11 +277,11 @@ function createMesssageElement(sender, message , timestamp) {
     const messageContainer = document.createElement("div");
     messageContainer.classList.add("fade-in");
     messageContainer.dataset.timestamp = timestamp; 
-    if (sender !== lastUser) {
+    if (sender !== LastMsgSender) {
         const messageUser = document.createElement("button");
         messageUser.textContent = sender;
         messageContainer.appendChild(messageUser);
-        lastUser = sender;
+        LastMsgSender = sender;
     }
 
     const messageContent = document.createElement("p");
@@ -307,7 +313,7 @@ function createMesssageElement(sender, message , timestamp) {
 }
 
 
-let lastUser=""
+let LastMsgSender=""
 //FUNCTION CALLED WHEN NEW MESSAGE ARRIVES
 function displayMessage(text) {
     let data;
@@ -316,6 +322,7 @@ function displayMessage(text) {
     } catch {
         return;
     }
+    
     console.log("Parsed data:", data, "Type:", typeof data);
     let [user, message, type, to, timestamp, loadHistory] = data;
     const isDM = type === "dm";
@@ -324,11 +331,13 @@ function displayMessage(text) {
         if (dm_recipient !== user && dm_recipient !== to) {
             console.log(`Skipping DM message not in current view: ${user} -> ${to}`);
             createDM(user);
+            notificationSound.play().catch(console.warn);
             return;
         }
-    } else if (msg_type === "dm") {
+    } else if (current_view === "dm") {
 
         console.log(`Skipping public message while in DM view`);
+        notificationSound.play().catch(console.warn);
         return;
     }
 
@@ -401,7 +410,7 @@ chatBox.addEventListener("scroll", () => {
         Oldesttimestamp = oldestElement.dataset.timestamp;
         if (!Oldesttimestamp) return;
 
-        if (msg_type === "dm") {
+        if (current_view === "dm") {
             showLoadingSkeleton()
             socket.send(JSON.stringify({
                 type: "load_dm",
@@ -409,7 +418,7 @@ chatBox.addEventListener("scroll", () => {
                 timestamp: Oldesttimestamp
             }));
         } 
-        else if (msg_type === "server") {
+        else if (current_view === "server") {
             showLoadingSkeleton()
 
             socket.send(JSON.stringify({
