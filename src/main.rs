@@ -1,31 +1,21 @@
+//use futures_util::{SinkExt, StreamExt};
+//use warp::ws::Message as WsMessage;
+//use serde::{Serialize, Deserialize};
 use std::collections::{HashMap};
 use std::env;
 use std::sync::Arc;
-
-//use futures_util::{SinkExt, StreamExt};
-
 use tokio::sync::{broadcast, RwLock};
-
-//use warp::ws::Message as WsMessage;
 use warp::{Filter, Reply, http::header::{SET_COOKIE, HeaderValue}};
-
-//use serde::{Serialize, Deserialize};
 use serde_json::json;
-
 use dotenvy::dotenv;
-
 use sqlx::PgPool;
-
 use regex::Regex;
 use uuid::Uuid;
 
 mod db;
-//use db::store_direct_message;
 mod socket; 
 use crate::socket::handle_socket;
 mod message;
-
-
 
 #[tokio::main]
 async fn main() {
@@ -35,6 +25,7 @@ async fn main() {
         "http://localhost:5501",               
         "https://thischord.pages.dev",         
     ])
+    .allow_any_origin()
     .allow_methods(vec!["GET", "POST"])
     .allow_headers(vec!["content-type"])
     .allow_credentials(true); 

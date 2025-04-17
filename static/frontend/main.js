@@ -1,4 +1,3 @@
-
 let http_url = "https://rust-chat-um86.onrender.com";
 //let http_url = "http://127.0.0.1:8080";
 
@@ -8,7 +7,6 @@ let socket
 let username; 
 const statusElement = document.getElementById("username");
 const notificationSound = new Audio(`/frontend/assets/notify.mp3`);
-setVh(); // Initial run
 init();
 
 async function init() {
@@ -60,7 +58,7 @@ function ConnectSocket() {
     socket.onopen = () => {
         socket.send(JSON.stringify({ type: "fetch_dm_list" }));
         ToggleStatus(1);
-        //restoreDMs();
+        socket.send(JSON.stringify({ type: "load_server",timestamp: new Date().toISOString()}));
 
         pingInterval = setInterval(() => {
             if (socket.readyState === WebSocket.OPEN) {
@@ -68,6 +66,7 @@ function ConnectSocket() {
                 socket.send("ping");
             }
         }, 600000);
+
         
     }
     socket.onclose = () => {
@@ -190,10 +189,12 @@ function switchToDM(username) {
         
         setTimeout(() => {
             LastMsgSender=""
-            if (username) {
-                socket.send(JSON.stringify({ type: "load_dm", with: username }));
+            
+            const CurrentTime=new Date().toISOString();
+            if (username && username !== "") {
+                socket.send(JSON.stringify({ type: "load_dm", with: username ,timestamp: CurrentTime}));
             } else {
-                socket.send(JSON.stringify({ type: "load_server"}));
+                socket.send(JSON.stringify({ type: "load_server",timestamp: CurrentTime}));
             }
 
             chatTitle.textContent = username ? `${dm_recipient}` : 'Server Chat';
@@ -208,6 +209,7 @@ function switchToDM(username) {
         //messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
+    //socket.send(JSON.stringify({ type: "mark_read", with: username }));
     // Remove notification dot if present
     const dmButtons = document.querySelectorAll(".dm-btn");
     dmButtons.forEach(btn => {

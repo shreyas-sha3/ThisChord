@@ -471,8 +471,9 @@
 
   @media (max-width: 768px) {
     html, body {
-      overscroll-behavior-y: contain;
-      touch-action: manipulation;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #app-container {
       height: calc(var(--vh) * 100);

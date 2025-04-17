@@ -1,10 +1,10 @@
-//SET VIEWPORT HEIGHT
-function setVh() {
-    const vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-  }
+function setRealVh() {
+  const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty('--vh', `${height * 0.01}px`);
+}
 
-  window.addEventListener('load', setVh);
-  window.addEventListener('resize', setVh);
-  window.addEventListener('orientationchange', setVh);
-
+window.addEventListener('load', setRealVh);
+window.visualViewport?.addEventListener('resize', setRealVh);
+window.visualViewport?.addEventListener('scroll', setRealVh); 
+document.addEventListener('focusin', setRealVh);
+document.addEventListener('focusout', setRealVh);
