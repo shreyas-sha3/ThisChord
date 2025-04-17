@@ -1,8 +1,8 @@
 
-//let http_url="http://localhost:8080"
-//let ws_url="ws://localhost:8080"
-let http_url="https://rust-chat-um86.onrender.com"
-let ws_url="wss://rust-chat-um86.onrender.com"
+let http_url="http://localhost:8080"
+let ws_url="ws://localhost:8080"
+//let http_url="https://rust-chat-um86.onrender.com"
+//let ws_url="wss://rust-chat-um86.onrender.com"
 
 let socket
 let username; 
@@ -490,3 +490,20 @@ if (logoutButton) {
 
   document.addEventListener('touchstart', handleTouchStart, false);
   document.addEventListener('touchend', handleTouchEnd, false);
+
+//Importing from interactions.js
+import {setupButtonPressEffect} from './interactions.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupButtonPressEffect('.server-btn'); // And this is for server-btn = ) ! 
+});
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.dm-btn');
+  if (btn) {
+    // Remove "selected" class from all DM buttons
+    document.querySelectorAll('.dm-btn.selected').forEach(b => b.classList.remove('selected'));
+
+    // Add it to the clicked one
+    btn.classList.add('selected');
+  }
+});

@@ -145,13 +145,16 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 5px; 
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, transform 0.1s ease;
     font-size: 15px; 
   }
-  
   .dm-btn:hover {
     background-color: var(--light-gray);
-    color: var(--dark-gray);
+    color: --var(fg);
+  }
+  .dm-btn.selected {
+    background-color: var(--blue);
+    color: --var(fg);
   }
   .notification-dot {
     height: 8px;
