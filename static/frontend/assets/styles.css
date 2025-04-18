@@ -73,7 +73,7 @@
     padding: 12px 0;
     gap: 8px;
     overflow-y: auto;
-    border-right: 0.5px solid var(--light-gray);
+    border-right: 0.75px solid var(--light-gray);
 
   }
   
@@ -202,7 +202,7 @@
   background-color: var(--bg);
   padding: 6px 10px;
   border-radius: 12px;  /* more rounded */
-  border: 1px solid var(--light-gray);
+  border: 1.4px solid var(--light-gray);
   color: var(--fg);
   box-shadow: 0 0 6px rgba(0,0,0,0.2);  /* soft glow */
 }
@@ -237,7 +237,7 @@
     font-size: 20px;
     font-weight: 600;
     padding: 10px 0;
-    border-bottom: 1px solid var(--light-gray);
+    border-bottom: 1.4px solid var(--light-gray);
     margin: 10px 16px 10px 16px;  /* Align horizontally */
     border-radius: 12px ;  /* Top rounding */
     background-color: var(--dark-gray);
@@ -390,7 +390,7 @@
     border-radius: 16px;
     background-color: var(--dark-gray);
     margin: 10px;
-    border-top: 1px solid var(--light-gray);
+    border-top: 1.4px solid var(--light-gray);
 
   }
   
@@ -403,21 +403,56 @@
     color: var(--fg);
     font-size: 16px;
   }
-  
-  #sendBtn {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 5px;
-    background-color: var(--blue);
-    color: white;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.2s;
+#sendBtn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  background-color: var(--blue);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+#sendBtn:hover {
+  background-image: linear-gradient(135deg, var(--blue), var(--green));
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+#sendBtn:active {
+  transform: scale(0.95);
+}
+
+/* Ripple effect */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  pointer-events: none;
+}
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
   }
-  
-  #sendBtn:hover {
-    background-color: var(--green);
-  }
+}
+#sendBtn svg {
+  vertical-align: middle;
+  transition: transform 0.2s ease;
+}
+
+#sendBtn:hover svg {
+  transform: scale(1.1);
+}
+
+
+
   
   /* === Login Page === */
   #LoginWrapper {

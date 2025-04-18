@@ -495,7 +495,7 @@ if (logoutButton) {
 import {setupButtonPressEffect} from './interactions.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  setupButtonPressEffect('.server-btn'); // And this is for server-btn = ) ! 
+  setupButtonPressEffect('.server-btn'); //this is for server-btn = ) ! 
 });
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.dm-btn');
