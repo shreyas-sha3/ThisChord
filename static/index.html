@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, target-densitydpi=device-dpi" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
   <title>ThisChord</title>
   <link rel="icon" type="image/x-icon" href="./frontend/assets/favicon.ico">
   <link rel="stylesheet" href="./frontend/assets/styles.css">
+  <script src="./frontend/viewport.js"></script>
 </head>
 <body>
   <div id="app-container">
@@ -42,12 +43,7 @@
       <form id="MessageBox" onsubmit="sendMessage(event)"><span></span>
         <button id="emoji-button" type="button" onclick="insertRandomEmoji()">⚄</button>
         <input type="text" id="ClientMessage" autocomplete="off" autofocus />
-        <button id="sendBtn">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-               stroke="currentColor" stroke-width="2" width="20" height="20">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        <button type="submit" id="sendBtn">➤</button>
       </form>
     </div>
   </div>

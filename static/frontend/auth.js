@@ -1,5 +1,5 @@
-//let url = "https://rust-chat-um86.onrender.com";
-let url = "http://localhost:8080";
+let url = "https://rust-chat-um86.onrender.com";
+//let url = "http://127.0.0.1:8080";
 
 const form = document.getElementById("auth-form");
 const msg = document.getElementById("log-message");
@@ -7,7 +7,6 @@ const toggleBtn = document.getElementById("log-reg-toggle");
 const formTitle = document.getElementById("form-title");
 
 let mode = "login";
-let notificationSound;
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -23,7 +22,7 @@ form.addEventListener("submit", async (e) => {
   const text = await response.text();
 
   if (mode === "login" && text.includes("Login successful")) {
-    notificationSound = new Audio("./assets/notify.mp3");
+    const notificationSound = new Audio(`/frontend/assets/notify.mp3`);
     notificationSound.play().then(() => {
       console.log("Sound enabled");
     }).catch((err) => {

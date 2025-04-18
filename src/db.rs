@@ -3,10 +3,18 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
-pub struct ChatMessage {
+pub struct ServerMessage {
     pub sender: String,
     pub content: String,
     pub sent_at: DateTime<Utc>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct DmMessage {
+    pub sender: String,
+    pub content: String,
+    pub sent_at: DateTime<Utc>,
+    pub read: Option<bool>,
 }
 
 // Get or create a conversation between two users
@@ -70,11 +78,10 @@ pub async fn load_server_messages(
     pool: &PgPool,
     limit: i64,
     before: Option<DateTime<Utc>>,
-) -> Result<Vec<ChatMessage>, Error> {
-    let rows = if let Some(before_ts) = before {
-        // Fetch older messages before `before_ts`, newest first
+) -> Result<Vec<ServerMessage>, Error> {
+    if let Some(before_ts) = before {
         sqlx::query_as!(
-            ChatMessage,
+            ServerMessage,
             r#"
             SELECT sender, content, sent_at
             FROM server_messages
@@ -86,11 +93,14 @@ pub async fn load_server_messages(
             limit
         )
         .fetch_all(pool)
-        .await?
+        .await
+        .map(|mut msgs| {
+            msgs.reverse();
+            msgs
+        })
     } else {
-        // Fetch most recent messages
         sqlx::query_as!(
-            ChatMessage,
+            ServerMessage,
             r#"
             SELECT sender, content, sent_at
             FROM server_messages
@@ -100,11 +110,14 @@ pub async fn load_server_messages(
             limit
         )
         .fetch_all(pool)
-        .await?
-    };
-
-    Ok(rows.into_iter().rev().collect())
+        .await
+        .map(|mut msgs| {
+            msgs.reverse();
+            msgs
+        })
+    }
 }
+
 
 // Load recent direct messages (DMs)
 pub async fn load_direct_messages(
@@ -112,13 +125,13 @@ pub async fn load_direct_messages(
     conversation_id: Uuid,
     limit: i64,
     before: Option<DateTime<Utc>>,
-) -> Result<Vec<ChatMessage>, Error> {
+) -> Result<Vec<DmMessage>, Error> {
     let rows = if let Some(before_ts) = before {
         // Fetch older DMs before `before_ts`
         sqlx::query_as!(
-            ChatMessage,
+            DmMessage,
             r#"
-            SELECT sender, content, sent_at
+            SELECT sender, content, sent_at,read
             FROM messages
             WHERE conversation_id = $1 AND sent_at < $2
             ORDER BY sent_at DESC
@@ -133,9 +146,9 @@ pub async fn load_direct_messages(
     } else {
         // Fetch most recent DMs
         sqlx::query_as!(
-            ChatMessage,
+            DmMessage,
             r#"
-            SELECT sender, content, sent_at
+            SELECT sender, content, sent_at,read
             FROM messages
             WHERE conversation_id = $1
             ORDER BY sent_at DESC
@@ -151,7 +164,25 @@ pub async fn load_direct_messages(
     Ok(rows.into_iter().rev().collect())
 }
 
+pub async fn mark_messages_as_read(
+    pool: &PgPool,
+    conversation_id: Uuid,
+    from_user: &str,
+) -> Result<(), Error> {
+    sqlx::query!(
+        r#"
+        UPDATE messages
+        SET read = TRUE
+        WHERE conversation_id = $1 AND sender = $2 AND read = FALSE
+        "#,
+        conversation_id,
+        from_user
+    )
+    .execute(pool)
+    .await?;
 
+    Ok(())
+}
 
 pub async fn fetch_dm_list(
     pool: &PgPool,

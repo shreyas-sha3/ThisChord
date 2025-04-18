@@ -1,3 +1,4 @@
+
 /* === Base Styles === */
 :root {
     --bg: #282828;
@@ -253,7 +254,7 @@
     background: var(--bg);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     width: 100%;
 
     opacity: 1;
@@ -265,20 +266,22 @@
     transition: opacity 0.25s ease-in-out;
   }
 
-  .fade-in {
+  /* .fade-in {
     opacity: 0;
     transition: opacity 0.3s ease-in;
   }
   
   .fade-in.show {
     opacity: 1;
-  }
+  } */
   
   .ChatBoxClone {
     display: flex;
     flex-direction: column;
     width: 100%;
-}
+    gap: 2px;
+
+  }
 
 /* Default message styles */
 #ChatBox p {
@@ -351,22 +354,21 @@
     border-radius: 4px;
   }
   
-  .locked-div {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: white;
-    z-index: 1000;
-}
 
   .timestamp {
     font-size: 0.75rem;  
-    opacity: 0.6;      /* smaller text */
-    margin-top: 2px;
+    opacity: 0.6;      
     margin-left: 4px;
-    user-select: none;         /* don't let users highlight it */
+    user-select: none;        
   }
   
+  .unread-divider {
+    border-bottom: 1px solid var(--red);
+    margin-bottom:10px;
+    color: var(--red);
+    text-align: center;
+    font-style: italic;
+}
 
 .LoadingMessage {
     text-align: center;
@@ -516,8 +518,9 @@
 
   @media (max-width: 768px) {
     html, body {
-      overscroll-behavior-y: contain;
-      touch-action: manipulation;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #app-container {
       height: calc(var(--vh) * 100);
@@ -541,13 +544,16 @@
       top: 37px;
       bottom: 60px;
       left: -60%;
-      width: 50%;
+      width: 55%;
       height: auto;
       z-index: 1000;
       transition: left 0.15s ease;
     }
-    
-  
+    #sidebar-container h3{
+      font-size: 10px;
+      white-space: nowrap; 
+    }
+
     #sidebar-container.active {
       left: 0;
     }  
@@ -605,4 +611,35 @@
     padding: 10px;
   }
 
+}
+
+
+/* animations */
+
+/* Bounce animation */
+@keyframes bounceIn {
+    0%   { transform: scale(0.95); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.bounce {
+    animation: bounceIn 0.4s ease;
+}
+
+/* Shake animation */
+@keyframes shakeAnim {
+    0% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+}
+.shake {
+    animation: shakeAnim 0.5s;
+}
+
+/* Optional: Smooth transitions for any element using fade/slide animations */
+.fade-slide {
+    transition: all 0.3s ease, opacity 0.3s ease;
 }
