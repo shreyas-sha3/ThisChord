@@ -1,5 +1,5 @@
 // interactions.js
-export function setupButtonPressEffect(selector = '.server-btn') {
+export function setupButtonPressEffect(selector) {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest(selector); 
       if (btn) {
@@ -10,9 +10,10 @@ export function setupButtonPressEffect(selector = '.server-btn') {
       }
     });
   }
+
+
   //Send Button Ripple Effect
 const sendBtn = document.getElementById("sendBtn");
-
 sendBtn.addEventListener("click", function (e) {
   const circle = document.createElement("span");
   const rect = this.getBoundingClientRect();

@@ -1,7 +1,7 @@
 import { fadeIn, slideInUp, shake } from './animations.js';
 
-let http_url = "https://rust-chat-um86.onrender.com";
-//let http_url = "http://127.0.0.1:8080";
+// let http_url = "https://rust-chat-um86.onrender.com";
+let http_url = "http://127.0.0.1:8000";
 
 
 
@@ -533,58 +533,18 @@ if (logoutButton) {
   })}
 
 
-  //PHONE
 
-  function setVh() {
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-  }
-  
-  window.addEventListener('resize', setVh);
-  window.addEventListener('orientationchange', setVh);
-  
-  const sidebar = document.getElementById('sidebar-container');
-  const mainContent = document.getElementById('main-content');
-  let touchStartX = 0;
-  let touchEndX = 0;
-
-  // Swipe detection
-  function handleTouchStart(e) {
-    touchStartX = e.changedTouches[0].screenX;
-  }
-
-  function handleTouchEnd(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    const deltaX = touchEndX - touchStartX;
-
-    if (deltaX > 50) {
-      // swipe right
-      sidebar.classList.add('active');
-    } else if (deltaX < -50) {
-      // swipe left
-      sidebar.classList.remove('active');
-    }
-  }
-
-  // Tap outside sidebar to close
-  document.addEventListener('click', (e) => {
-    sidebar.classList.remove('active');
-  });
-
-  document.addEventListener('touchstart', handleTouchStart, false);
-  document.addEventListener('touchend', handleTouchEnd, false);
-
-//Importing from interactions.js button animations
+//button animations
 import {setupButtonPressEffect} from './interactions.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   setupButtonPressEffect('.server-btn');
+  setupButtonPressEffect('.dm-btn');
 });
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.dm-btn');
   if (btn) {
     document.querySelectorAll('.dm-btn.selected').forEach(b => b.classList.remove('selected'));
-
     btn.classList.add('selected');
   }
 });

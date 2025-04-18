@@ -21,11 +21,10 @@ mod message;
 async fn main() {
     let cors = warp::cors()
     .allow_origins(vec![
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",               
+        "http://127.0.0.1:5501",
+        "http://localhost:5501",               
         "https://thischord.pages.dev",         
     ])
-    .allow_any_origin()
     .allow_methods(vec!["GET", "POST"])
     .allow_headers(vec!["content-type"])
     .allow_credentials(true); 
