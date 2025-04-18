@@ -1,3 +1,5 @@
+import { fadeIn, slideInUp, shake } from './animations.js';
+
 let http_url = "https://rust-chat-um86.onrender.com";
 //let http_url = "http://127.0.0.1:8080";
 
@@ -104,6 +106,7 @@ function ConnectSocket() {
             }
             
             //individual messages
+            
             displayMessage(event.data);
 
             if (document.hidden) {
@@ -156,6 +159,7 @@ function createDM(dmUsername) {
         newDM.textContent = dmUsername;
         newDM.addEventListener("click", () => switchToDM(dmUsername));
         dmPane.appendChild(newDM);
+        requestAnimationFrame(() => fadeIn(newDM));
 
         const dmList = JSON.parse(localStorage.getItem("dmList") || "[]");
         if (!dmList.includes(dmUsername)) {
@@ -182,12 +186,9 @@ function switchToDM(username) {
         current_view = username ? "dm" : "server";
         dm_recipient = username;
 
-        // Start fade out
-        messagesDiv.classList.add("fade-transition");
         chatBox.innerHTML = '';
         showLoadingSkeleton();
-        
-        setTimeout(() => {
+
             LastMsgSender=""
             
             const CurrentTime=new Date().toISOString();
@@ -199,26 +200,26 @@ function switchToDM(username) {
 
             chatTitle.textContent = username ? `${dm_recipient}` : 'Server Chat';
             messageInput.placeholder = username ? `Message ${dm_recipient}...` : `Type a message...`;
-
-            // Fade in
-            messagesDiv.classList.remove("fade-transition");
-        }, 200); // Wait for fade-out to finish
     }
+    
+    if (current_view === "dm") {
+        const dmButtons = document.querySelectorAll(".dm-btn");
+        
+        dmButtons.forEach(btn => {
+            if (btn.textContent.trim() === username) {
+                const dot = btn.querySelector(".notification-dot");
+                
+                if (dot) dot.remove();
+                
+                setTimeout(() => {
+                    const divider = document.querySelector(".unread-divider");
+                    if (divider) divider.remove();
 
-    requestAnimationFrame(() => {
-        //messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-
-    //socket.send(JSON.stringify({ type: "mark_read", with: username }));
-    // Remove notification dot if present
-    const dmButtons = document.querySelectorAll(".dm-btn");
-    dmButtons.forEach(btn => {
-        if (btn.textContent.trim().startsWith(username)) {
-            const dot = btn.querySelector(".notification-dot");
-            if (dot) dot.remove();
-        }
-    });
-
+                }, 4000);
+            }
+        });   
+        socket.send(JSON.stringify({ type: "mark_read", with: username }));
+    }
     messageInput.focus();
 }
 
@@ -239,32 +240,44 @@ document.getElementById("ChatBox").addEventListener("click", (event) => {
 document.querySelector('.server-btn:first-child').addEventListener('click', () => {
     switchToDM(null);
 });
-//LOADING WHILE SWITCHING DMS
+
+
+//LOADING...
 function showLoadingSkeleton() {
     const chatBox = document.getElementById('ChatBox');
-    //chatBox.innerHTML = '';
+
     const loadingMsg = document.createElement("p");
     loadingMsg.textContent = "Loading messages";
-    loadingMsg.classList.add("LoadingMessage"); 
+    loadingMsg.classList.add("LoadingMessage");
     chatBox.prepend(loadingMsg);
+
     let dotCount = 0;
     const interval = setInterval(() => {
         dotCount = (dotCount + 1) % 4;
         loadingMsg.textContent = "Loading messages" + ".".repeat(dotCount);
     }, 150);
-    //remove in 3 secs
-    setTimeout(() => {
-        clearInterval(interval);
-        loadingMsg.remove();
-    }, 500);
+
+    //NO IDEA HOW THIS WORKS GOAT GPT
+    const observer = new MutationObserver(() => {
+        const hasOtherElements = [...chatBox.children].some(
+            (el) => el !== loadingMsg
+        );
+
+        if (hasOtherElements) {
+            clearInterval(interval);
+            observer.disconnect();
+            loadingMsg.remove();
+        }
+    });
+    observer.observe(chatBox, { childList: true });
 }
+
 
 
 
 //CREATING FORMATTED MESSAGES
 function createMesssageElement(sender, message , timestamp) {
     const messageContainer = document.createElement("div");
-    messageContainer.classList.add("fade-in");
     messageContainer.dataset.timestamp = timestamp; 
     if (sender !== LastMsgSender) {
         const messageUser = document.createElement("button");
@@ -303,6 +316,7 @@ function createMesssageElement(sender, message , timestamp) {
 
 
 let LastMsgSender=""
+
 //FUNCTION CALLED WHEN NEW MESSAGE ARRIVES
 function displayMessage(text) {
     let data;
@@ -317,6 +331,7 @@ function displayMessage(text) {
     const isDM = type === "dm";
 
     if (isDM) {
+        
         if (dm_recipient !== user && dm_recipient !== to && user!==username) {
             console.log(`Skipping DM message not in current view: ${user} -> ${to}`);
             createDM(user);
@@ -331,59 +346,92 @@ function displayMessage(text) {
     }
 
     const messagesDiv = document.getElementById("ChatBox");
-
     if (!timestamp) timestamp = new Date().toISOString();
 
-        const element = createMesssageElement(user, message, timestamp);
+    const element = createMesssageElement(user, message, timestamp);
+        if(user!=="SERVER"){
+        slideInUp(element);
+        }
+        else{
+        shake(element); 
+        }
         messagesDiv.appendChild(element);
-        requestAnimationFrame(() => {
-            element.classList.add("show"); 
-        });
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    //}
+        if(isDM && user !== username){
+            socket.send(JSON.stringify({ type: "mark_read", with: user }));
+            }
+
+        const nearBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop <= messagesDiv.clientHeight + 120;
+        if (nearBottom || user === username) {
+            messagesDiv.scrollTo({ top: messagesDiv.scrollHeight, behavior: 'smooth' });
+        }
+                
     
 }
 
+let unreadMarked;
 function TakeALoadOfThis(msgs) {
+    //IF NO MORE
     const messagesDiv = document.getElementById("ChatBox");
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("ChatBoxClone"); // use the same styles as ChatBox
-    const elements=[];
-
-    let timestamp;
-    for (const msg of msgs) {
-        const [user, message, type, withUser, msgTimestamp] = msg;
-        const element = createMesssageElement(user, message, msgTimestamp);
-        wrapper.appendChild(element);
-        elements.push(element); // collect them for animation
-        timestamp = msgTimestamp;
+    if (msgs.length === 0) {
+        const loadingMsg = document.createElement("p");
+        loadingMsg.textContent = "Loaded all messages";
+        loadingMsg.classList.add("LoadingMessage");
+        messagesDiv.appendChild(loadingMsg);
+        shake(messagesDiv);
+        return;
     }
 
+    //CREATE 30 MSG WRAPPER
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("ChatBoxClone"); 
+    let timestamp;
+    for (const msg of msgs) {
+        console.log(msg)
+        const [user, message, type, withUser, msgTimestamp,read_status] = msg;
+        const element = createMesssageElement(user, message, msgTimestamp);
+        wrapper.appendChild(element);
+        timestamp = msgTimestamp;
+        
+        if (user!==username && !read_status && !unreadMarked) {
+            const divider = document.createElement("div");
+            divider.classList.add("unread-divider");
+            divider.textContent = "Unread Messages";
+            divider.dataset.timestamp = msgTimestamp; 
+            wrapper.insertBefore(divider,element); 
+            unreadMarked = true;
+        }
+        
+    }
+    
+    
     //store scroll position and disable scroll 
-    const topVisible = messagesDiv.firstElementChild;
-    const topOffset = topVisible?.getBoundingClientRect().top;
+    const prevScrollHeight = messagesDiv.scrollHeight;
     messagesDiv.style.overflow = "hidden";
-
+    
     messagesDiv.prepend(wrapper); 
 
-    //restore scroll position and enable scroll again
-    requestAnimationFrame(() => {
-        if (topVisible) {
-            const newOffset = topVisible.getBoundingClientRect().top;
-            messagesDiv.scrollTop += newOffset - topOffset;
-            for (const el of elements) {
-                el.classList.add("show"); // fade them in
-            }
-
+        requestAnimationFrame(() => {
+        fadeIn(wrapper);
+        
+        //SCROLL TO UNREAD MESSAGES
+        if (unreadMarked) {
+            const unreadDiv = document.querySelector(".unread-divider");
+            unreadDiv.scrollIntoView({ behavior: "smooth", block: "center" });
+            unreadMarked = false;
+        } else {
+            const newScrollHeight = messagesDiv.scrollHeight;
+            const scrollDiff = newScrollHeight - prevScrollHeight;
+            messagesDiv.scrollTop += scrollDiff;
         }
-    });
 
-    messagesDiv.style.overflow = "auto";
+        messagesDiv.style.overflow = "auto";
+    });
+    
+
     if (timestamp) {
         Oldesttimestamp = timestamp;
     }
 }
-
 
 
 let Oldesttimestamp;

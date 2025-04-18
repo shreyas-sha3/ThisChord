@@ -92,7 +92,7 @@ pub async fn handle_socket(
                             let messages_array: Vec<_> = messages
                                 .into_iter()
                                 .map(|ServerMessage { sender, content, sent_at, .. }| {
-                                    json!([sender, content, "server", "all", sent_at.to_rfc3339()])
+                                    json!([sender, content, "server", "all", sent_at.to_rfc3339(),true])
                                 })
                                 .collect();
             
@@ -191,7 +191,14 @@ pub async fn handle_socket(
             }
             
             //MARK MESSAGES AS READ
-            Ok(ClientMessage::MarkDmRead { .. }) => {}
+            Ok(ClientMessage::MarkDmRead { with }) => {
+                if let Ok(conversation_id) = get_or_create_conversation(&db, &username, &with).await {
+                    if let Err(e) = mark_messages_as_read(&db, conversation_id, &with).await {
+                        eprintln!("Failed to mark messages as read: {}", e);
+                    }
+                }
+            }
+            
 
             //GET/CREATE DM CONVO ID
             Ok(ClientMessage::DirectMessage { to, msg }) => {
@@ -220,7 +227,7 @@ pub async fn handle_socket(
                                 if is_history {
                                     let messages_array: Vec<_> = messages
                                         .into_iter()
-                                        .map(|DmMessage { sender, content, sent_at, read,.. }| {
+                                        .map(|DmMessage { sender, content, sent_at, read}| {
                                             json!([sender, content, "dm", with, sent_at.to_rfc3339(),read])
                                         })
                                         .collect();
@@ -234,7 +241,7 @@ pub async fn handle_socket(
                                 } 
                                 //NEW MESSAGES                                    
                                 else {
-                                    for DmMessage { sender, content, sent_at,read, .. } in messages {
+                                    for DmMessage { sender, content, sent_at, read} in messages {
                                         let payload = json!([sender, content, "dm", with, sent_at.to_rfc3339(),read])
                                             .to_string();
                                         sender_dm.lock().await.send(WsMessage::text(payload)).await.ok();

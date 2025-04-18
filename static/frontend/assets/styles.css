@@ -251,7 +251,7 @@
     background: var(--bg);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     width: 100%;
 
     opacity: 1;
@@ -263,20 +263,22 @@
     transition: opacity 0.25s ease-in-out;
   }
 
-  .fade-in {
+  /* .fade-in {
     opacity: 0;
     transition: opacity 0.3s ease-in;
   }
   
   .fade-in.show {
     opacity: 1;
-  }
+  } */
   
   .ChatBoxClone {
     display: flex;
     flex-direction: column;
     width: 100%;
-}
+    gap: 2px;
+
+  }
 
 /* Default message styles */
 #ChatBox p {
@@ -357,6 +359,13 @@
     user-select: none;        
   }
   
+  .unread-divider {
+    border-bottom: 1px solid var(--red);
+    margin-bottom:10px;
+    color: var(--red);
+    text-align: center;
+    font-style: italic;
+}
 
 .LoadingMessage {
     text-align: center;
@@ -564,4 +573,35 @@
     padding: 10px;
   }
 
+}
+
+
+/* animations */
+
+/* Bounce animation */
+@keyframes bounceIn {
+    0%   { transform: scale(0.95); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.bounce {
+    animation: bounceIn 0.4s ease;
+}
+
+/* Shake animation */
+@keyframes shakeAnim {
+    0% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+}
+.shake {
+    animation: shakeAnim 0.5s;
+}
+
+/* Optional: Smooth transitions for any element using fade/slide animations */
+.fade-slide {
+    transition: all 0.3s ease, opacity 0.3s ease;
 }
