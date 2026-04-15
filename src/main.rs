@@ -35,8 +35,38 @@ async fn main() {
     let users = Arc::new(RwLock::new(HashMap::new()));
     //let message_history = Arc::new(Mutex::new(VecDeque::new()));
     let username_regex = Arc::new(Regex::new(r"^[a-zA-Z0-9_.-]{4,}$").unwrap());
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL not set");
+    let db_url = env::var("DATABASE_URL").unwrap();
     let pool = PgPool::connect(&db_url).await.expect("Failed to connect to DB");
+
+sqlx::query("CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    session_token VARCHAR(255)
+);").execute(&pool).await.expect("Failed to create users table");
+
+sqlx::query("CREATE TABLE IF NOT EXISTS conversations (
+    id UUID PRIMARY KEY,
+    user1 VARCHAR(255) NOT NULL,
+    user2 VARCHAR(255) NOT NULL
+);").execute(&pool).await.expect("Failed to create conversations table");
+
+sqlx::query("CREATE TABLE IF NOT EXISTS messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id UUID NOT NULL,
+    sender VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    sent_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read BOOLEAN DEFAULT FALSE
+);").execute(&pool).await.expect("Failed to create messages table");
+
+sqlx::query("CREATE TABLE IF NOT EXISTS server_messages (
+    id SERIAL PRIMARY KEY,
+    sender VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    sent_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);").execute(&pool).await.expect("Failed to create server_messages table");
+
     let db = Arc::new(pool);
 
     let register = {

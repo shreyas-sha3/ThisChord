@@ -160,11 +160,9 @@ pub async fn handle_socket(
                         let sender_clone = username.clone();
                         let msg_clone = msg.clone();
                         tokio::spawn(async move {
-                            sqlx::query!(
-                                "INSERT INTO server_messages (sender, content) VALUES ($1, $2)",
-                                sender_clone,
-                                msg_clone
-                            )
+                            sqlx::query("INSERT INTO server_messages (sender, content) VALUES ($1, $2)")
+                                .bind(sender_clone)
+                                .bind(msg_clone)
                             .execute(&*db)
                             .await
                             .ok(); // optionally log on error

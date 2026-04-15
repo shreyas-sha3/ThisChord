@@ -29,11 +29,11 @@ pub async fn get_or_create_conversation(
         (user2, user1)
     };
 
-    let existing = sqlx::query_scalar!(
-        r#"SELECT id FROM conversations WHERE user1 = $1 AND user2 = $2"#,
-        u1,
-        u2
+    let existing = sqlx::query_scalar::<_, Uuid>(
+        r#"SELECT id FROM conversations WHERE user1 = $1 AND user2 = $2"#
     )
+    .bind(u1)
+    .bind(u2)
     .fetch_optional(pool)
     .await?;
 
@@ -41,12 +41,12 @@ pub async fn get_or_create_conversation(
         Ok(id)
     } else {
         let new_id = Uuid::new_v4();
-        sqlx::query!(
-            r#"INSERT INTO conversations (id, user1, user2) VALUES ($1, $2, $3)"#,
-            new_id,
-            u1,
-            u2
+        sqlx::query(
+            r#"INSERT INTO conversations (id, user1, user2) VALUES ($1, $2, $3)"#
         )
+        .bind(new_id)
+        .bind(u1)
+        .bind(u2)
         .execute(pool)
         .await?;
         Ok(new_id)
@@ -60,19 +60,20 @@ pub async fn store_direct_message(
     sender: &str,
     content: &str,
 ) -> Result<(), Error> {
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO messages (conversation_id, sender, content)
         VALUES ($1, $2, $3)
-        "#,
-        conversation_id,
-        sender,
-        content
+        "#
     )
+    .bind(conversation_id)
+    .bind(sender)
+    .bind(content)
     .execute(pool)
     .await?;
     Ok(())
 }
+
 // Load recent server messages (public chat)
 pub async fn load_server_messages(
     pool: &PgPool,
@@ -80,18 +81,17 @@ pub async fn load_server_messages(
     before: Option<DateTime<Utc>>,
 ) -> Result<Vec<ServerMessage>, Error> {
     if let Some(before_ts) = before {
-        sqlx::query_as!(
-            ServerMessage,
+        sqlx::query_as::<_, ServerMessage>(
             r#"
             SELECT sender, content, sent_at
             FROM server_messages
             WHERE sent_at < $1
             ORDER BY sent_at DESC
             LIMIT $2
-            "#,
-            before_ts,
-            limit
+            "#
         )
+        .bind(before_ts)
+        .bind(limit)
         .fetch_all(pool)
         .await
         .map(|mut msgs| {
@@ -99,16 +99,15 @@ pub async fn load_server_messages(
             msgs
         })
     } else {
-        sqlx::query_as!(
-            ServerMessage,
+        sqlx::query_as::<_, ServerMessage>(
             r#"
             SELECT sender, content, sent_at
             FROM server_messages
             ORDER BY sent_at DESC
             LIMIT $1
-            "#,
-            limit
+            "#
         )
+        .bind(limit)
         .fetch_all(pool)
         .await
         .map(|mut msgs| {
@@ -117,7 +116,6 @@ pub async fn load_server_messages(
         })
     }
 }
-
 
 // Load recent direct messages (DMs)
 pub async fn load_direct_messages(
@@ -128,35 +126,33 @@ pub async fn load_direct_messages(
 ) -> Result<Vec<DmMessage>, Error> {
     let rows = if let Some(before_ts) = before {
         // Fetch older DMs before `before_ts`
-        sqlx::query_as!(
-            DmMessage,
+        sqlx::query_as::<_, DmMessage>(
             r#"
-            SELECT sender, content, sent_at,read
+            SELECT sender, content, sent_at, read
             FROM messages
             WHERE conversation_id = $1 AND sent_at < $2
             ORDER BY sent_at DESC
             LIMIT $3
-            "#,
-            conversation_id,
-            before_ts,
-            limit
+            "#
         )
+        .bind(conversation_id)
+        .bind(before_ts)
+        .bind(limit)
         .fetch_all(pool)
         .await?
     } else {
         // Fetch most recent DMs
-        sqlx::query_as!(
-            DmMessage,
+        sqlx::query_as::<_, DmMessage>(
             r#"
-            SELECT sender, content, sent_at,read
+            SELECT sender, content, sent_at, read
             FROM messages
             WHERE conversation_id = $1
             ORDER BY sent_at DESC
             LIMIT $2
-            "#,
-            conversation_id,
-            limit
+            "#
         )
+        .bind(conversation_id)
+        .bind(limit)
         .fetch_all(pool)
         .await?
     };
@@ -169,37 +165,42 @@ pub async fn mark_messages_as_read(
     conversation_id: Uuid,
     from_user: &str,
 ) -> Result<(), Error> {
-    sqlx::query!(
+    sqlx::query(
         r#"
         UPDATE messages
         SET read = TRUE
         WHERE conversation_id = $1 AND sender = $2 AND read = FALSE
-        "#,
-        conversation_id,
-        from_user
+        "#
     )
+    .bind(conversation_id)
+    .bind(from_user)
     .execute(pool)
     .await?;
 
     Ok(())
 }
 
+#[derive(sqlx::FromRow)]
+struct DmPartnerRow {
+    dm_partner: Option<String>,
+}
+
 pub async fn fetch_dm_list(
     pool: &PgPool,
     current_user: &str,
 ) -> Result<Vec<String>, Error> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as::<_, DmPartnerRow>(
         r#"
-        SELECT 
-            CASE 
-                WHEN user1 = $1 THEN user2 
-                ELSE user1 
+        SELECT
+            CASE
+                WHEN user1 = $1 THEN user2
+                ELSE user1
             END AS dm_partner
         FROM conversations
         WHERE user1 = $1 OR user2 = $1
-        "#,
-        current_user
+        "#
     )
+    .bind(current_user)
     .fetch_all(pool)
     .await?;
 
